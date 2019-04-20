@@ -1,0 +1,65 @@
+<html>
+    <head>
+        <script src="incppect.js"></script>
+    </head>
+
+    <body>
+        <h3>Incppect example: client-info</h3>
+        <b>clients.html</b><br><br>
+
+        <script>
+            function int_to_ip(int) {
+                var part1 = int & 255;
+                var part2 = ((int >> 8) & 255);
+                var part3 = ((int >> 16) & 255);
+                var part4 = ((int >> 24) & 255);
+
+                if (part1 == 0 && part2 == 0 && part3 == 0 && part4 == 1) {
+                    return "localhost";
+                }
+
+                return part1 + "." + part2 + "." + part3 + "." + part4;
+            }
+
+            function init() {
+                // create output element
+                var output = document.createElement('div');
+                document.body.appendChild( output );
+
+                // define incppect client functions
+                incppect.render = function() {
+                    // print incppect client info
+                    var nclients = this.get_int32('incppect.nclients');
+                    var tx_total = this.get_int32('incppect.tx_total');
+                    var rx_total = this.get_int32('incppect.rx_total');
+
+                    output.innerHTML = 'nclients = ' + nclients + '<br>';
+                    for (var i = 0; i < nclients; ++i) {
+                        var ipaddress_bytes = this.get_int32('incppect.ip_address[%d]', i);
+                        output.innerHTML += 'client ' + i + ' : ' + int_to_ip(ipaddress_bytes) + '<br>';
+                    }
+                    output.innerHTML += 'tx total = ' + (tx_total/1024.0/1024.0).toFixed(4) + ' MB<br>';
+                    output.innerHTML += 'rx total = ' + (rx_total/1024.0/1024.0).toFixed(4) + ' MB<br>';
+                }
+
+                incppect.onerror = function(evt) {
+                    if (typeof evt === 'object') {
+                        output.innerHTML = 'Error: check console for more information';
+                        console.error(evt);
+                    } else {
+                        output.innerHTML = evt;
+                    }
+                }
+
+                // initialize incppect client
+                incppect.init();
+            }
+
+            init();
+        </script>
+
+        <br>
+
+        <a href="index.html">Show data</a>
+    </body>
+</html>

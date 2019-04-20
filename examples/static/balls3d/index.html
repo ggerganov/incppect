@@ -1,0 +1,116 @@
+<html>
+    <head>
+        <script src="incppect.js"></script>
+        <script src="http://mrdoob.github.com/three.js/build/three.min.js"></script>
+    </head>
+
+    <body>
+        <script>
+            var camera, scene, renderer;
+            var geometry, material, mesh;
+
+            function init() {
+                // configure incppect client
+                incppect.k_requests_update_freq_ms = 20;
+
+                // define incppect client functions
+                incppect.render = function() {
+                    var nballs = this.get_int32('state.nballs');
+
+                    while (scene.children.length <= nballs) {
+                        var geometry = new THREE.SphereGeometry( 1.0, 32, 32 );
+                        var material = new THREE.MeshStandardMaterial();
+                        var mesh = new THREE.Mesh( geometry, material );
+                        scene.add(mesh);
+                    }
+
+                    while (scene.children.length > nballs + 1) {
+                        scene.children.pop();
+                    }
+
+                    for (var i = 0; i < nballs; ++i) {
+                        var x = this.get_float('state.ball[%d].x', i);
+                        var y = this.get_float('state.ball[%d].y', i);
+                        var z = this.get_float('state.ball[%d].z', i);
+                        var r = this.get_float('state.ball[%d].r', i);
+
+                        scene.children[i + 1].scale.x = r;
+                        scene.children[i + 1].scale.y = r;
+                        scene.children[i + 1].scale.z = r;
+                        scene.children[i + 1].position.x = x;
+                        scene.children[i + 1].position.y = -y;
+                        scene.children[i + 1].position.z = -z;
+                    }
+
+                    var time = - performance.now() * 0.0003;
+
+                    camera.position.x = 1 * Math.cos( time );
+                    camera.position.z = 1 * Math.sin( time );
+                    camera.position.y = 0.2 * Math.sin( 1.673*time );
+                    camera.lookAt( scene.position );
+
+                    renderer.render( scene, camera );
+                }
+
+                // initialize incppect client
+                incppect.init();
+
+                // configure three.js stuff
+                camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.01, 10 );
+
+                scene = new THREE.Scene();
+
+                // room - grid walls + some lights
+                var groupRoom = new THREE.Group();
+
+                var gridHelper = new THREE.GridHelper( 2.0, 10, 0x0000ff, 0x808080 );
+                gridHelper.position.y = -1;
+                groupRoom.add( gridHelper );
+
+                var gridHelper = new THREE.GridHelper( 2.0, 10, 0x0000ff, 0x808080 );
+                gridHelper.position.y = 1;
+                groupRoom.add( gridHelper );
+
+                var gridHelper = new THREE.GridHelper( 2.0, 10, 0x0000ff, 0x808080 );
+                gridHelper.rotation.x = Math.PI / 2;
+                gridHelper.position.z = -1;
+                groupRoom.add( gridHelper );
+
+                var gridHelper = new THREE.GridHelper( 2.0, 10, 0x0000ff, 0x808080 );
+                gridHelper.rotation.x = Math.PI / 2;
+                gridHelper.position.z = 1;
+                groupRoom.add( gridHelper );
+
+                var gridHelper = new THREE.GridHelper( 2.0, 10, 0x0000ff, 0x808080 );
+                gridHelper.rotation.x = Math.PI / 2;
+                gridHelper.rotation.z = Math.PI / 2;
+                gridHelper.position.x = -1;
+                groupRoom.add( gridHelper );
+
+                var gridHelper = new THREE.GridHelper( 2.0, 10, 0x0000ff, 0x808080 );
+                gridHelper.rotation.x = Math.PI / 2;
+                gridHelper.rotation.z = Math.PI / 2;
+                gridHelper.position.x = 1;
+                groupRoom.add( gridHelper );
+
+                var light = new THREE.AmbientLight( 0x404040 );
+                groupRoom.add( light );
+
+                light = new THREE.PointLight(); light.position.set(  1,  0,  0 ); light.intensity = 0.1; groupRoom.add( light );
+                light = new THREE.PointLight(); light.position.set( -1,  0,  0 ); light.intensity = 0.1; groupRoom.add( light );
+                light = new THREE.PointLight(); light.position.set(  0,  1,  0 ); light.intensity = 0.1; groupRoom.add( light );
+                light = new THREE.PointLight(); light.position.set(  0, -1,  0 ); light.intensity = 0.1; groupRoom.add( light );
+                light = new THREE.PointLight(); light.position.set(  0,  0,  1 ); light.intensity = 0.1; groupRoom.add( light );
+                light = new THREE.PointLight(); light.position.set(  0,  0, -1 ); light.intensity = 0.1; groupRoom.add( light );
+
+                scene.add( groupRoom );
+
+                renderer = new THREE.WebGLRenderer( { antialias: true } );
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                document.body.appendChild( renderer.domElement );
+            }
+
+            init();
+        </script>
+    </body>
+</html>

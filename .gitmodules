@@ -1,0 +1,6 @@
+[submodule "third_party/uWebSockets"]
+	path = third_party/uWebSockets
+	url = https://github.com/uNetworking/uWebSockets
+[submodule "third_party/uSockets"]
+	path = third_party/uSockets
+	url = https://github.com/uNetworking/uSockets

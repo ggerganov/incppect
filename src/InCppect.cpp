@@ -10,8 +10,35 @@
 #include <map>
 #include <string>
 #include <fstream>
+#include <chrono>
+#include <sstream>
+
+namespace {
+    inline int64_t timestamp() {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    }
+}
 
 struct InCppect::Impl {
+    struct Request {
+        int64_t tLastUpdated_ms = -1;
+        int64_t tLastRequested_ms = -1;
+        int64_t tMinUpdate_ms = 100;
+        int64_t tLastRequestTimeout_ms = 3000;
+
+        TIdxs idxs;
+        int getterId = -1;
+
+        std::vector<char> prevData;
+        std::string_view curData;
+    };
+
+    struct ClientData {
+        int64_t tConnected_ms = -1;
+
+        std::map<int, Request> requests;
+    };
+
     struct PerSocketData {
         int clientId = 0;
 
@@ -33,19 +60,81 @@ struct InCppect::Impl {
                     static int uniqueId = 1;
                     ++uniqueId;
 
-                    auto perSocketData = (PerSocketData *) ws->getUserData();
-                    perSocketData->clientId = uniqueId;
-                    perSocketData->ws = ws;
-                    perSocketData->mainLoop = uWS::Loop::get();
-                    wsClients.insert({ uniqueId, perSocketData });
+                    clientData[uniqueId].tConnected_ms = ::timestamp();
 
-                    std::cout << "[+] Client with Id = " << perSocketData->clientId  << " connected\n";
+                    auto sd = (PerSocketData *) ws->getUserData();
+                    sd->clientId = uniqueId;
+                    sd->ws = ws;
+                    sd->mainLoop = uWS::Loop::get();
+                    socketData.insert({ uniqueId, sd });
+
+                    std::cout << "[+] Client with Id = " << sd->clientId  << " connected\n";
                 },
-                .message = [](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                    ws->send(message, opCode);
+                .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
+                    std::cout << "Received message size = " << message.size() << std::endl;
+                    if (message.size() < sizeof(int)) {
+                        return;
+                    }
+
+                    int * p = (int *) message.data();
+                    int type = p[0];
+                    auto sd = (PerSocketData *) ws->getUserData();
+
+                    auto & cd = clientData[sd->clientId];
+
+                    switch (type) {
+                        case 1:
+                            {
+                                std::cout << "var_to_id: " << message.data() + 4 << std::endl;
+                                std::stringstream ss(message.data() + 4);
+                                while (true) {
+                                    Request request;
+
+                                    std::string path;
+                                    ss >> path;
+                                    if (ss.eof()) break;
+                                    int requestId = 0;
+                                    ss >> requestId;
+                                    int nidxs = 0;
+                                    ss >> nidxs;
+                                    for (int i = 0; i < nidxs; ++i) {
+                                        int idx = 0;
+                                        ss >> idx;
+                                        request.idxs.push_back(idx);
+                                    }
+
+                                    if (pathToGetter.find(path) != pathToGetter.end()) {
+                                        cd.requests[requestId].getterId = pathToGetter[path];
+                                    }
+
+                                    printf("requestId = %d, path = '%s'\n", requestId, path.c_str());
+                                }
+                            }
+                            break;
+                        case 2:
+                            {
+                                int nRequests = (message.size() - sizeof(int))/sizeof(int);
+                                std::cout << "Received requests: " << nRequests << std::endl;
+
+                                for (int i = 0; i < nRequests; ++i) {
+                                    int curRequest = p[i + 1];
+                                    if (cd.requests.find(curRequest) != cd.requests.end()) {
+                                        cd.requests[curRequest].tLastRequested_ms = ::timestamp();
+                                    }
+                                }
+                            }
+                            break;
+                        default:
+                            std::cout << "Unknown message type = " << type << std::endl;
+                    };
+                    //ws->send(message, opCode);
+                    sd->mainLoop->defer([this]() { this->update(); });
                 },
                 .drain = [](auto *ws) {
                     /* Check getBufferedAmount here */
+                    if (ws->getBufferedAmount() > 0) {
+                        std::cout << "  [drain] Buffered amount = " << ws->getBufferedAmount() << std::endl;
+                    }
                 },
                 .ping = [](auto *ws) {
 
@@ -54,10 +143,11 @@ struct InCppect::Impl {
 
                 },
                 .close = [&](auto *ws, int code, std::string_view message) {
-                    auto perSocketData = (PerSocketData *) ws->getUserData();
-                    std::cout << "[+] Client with Id = " << perSocketData->clientId  << " disconnected\n";
+                    auto sd = (PerSocketData *) ws->getUserData();
+                    std::cout << "[+] Client with Id = " << sd->clientId  << " disconnected\n";
 
-                    wsClients.erase(perSocketData->clientId);
+                    clientData.erase(sd->clientId);
+                    socketData.erase(sd->clientId);
                 }
         }).get("/*", [](auto *res, auto *req) {
             std::ifstream t("../data/index.html");
@@ -71,10 +161,32 @@ struct InCppect::Impl {
         }).run();
     }
 
+    void update() {
+        for (auto & [clientId, cd] : clientData) {
+            for (auto & [requestId, req] : cd.requests) {
+                auto & getter = getters[req.getterId];
+                auto tCur = ::timestamp();
+                if (tCur - req.tLastRequested_ms < req.tLastRequestTimeout_ms &&
+                    tCur - req.tLastUpdated_ms > req.tMinUpdate_ms) {
+                    printf("Update %d\n", req.getterId);
+                    req.curData = getter(req.idxs);
+                    req.tLastUpdated_ms = tCur;
+                }
+            }
+        }
+    }
+
+    void push() {
+    }
+
     int port = 3000;
 
+    std::map<TPath, int> pathToGetter;
+    std::vector<TGetter> getters;
+
     uWS::Loop * mainLoop = nullptr;
-    std::map<int, PerSocketData *> wsClients;
+    std::map<int, PerSocketData *> socketData;
+    std::map<int, ClientData> clientData;
 };
 
 InCppect::InCppect() : m_impl(new Impl()) {}
@@ -88,5 +200,18 @@ bool InCppect::init(int port) {
 }
 
 void InCppect::run() {
+    var("nClients", [this](const TIdxs & idxs) {
+        static int n = 0;
+        n = m_impl->socketData.size();
+        return std::string_view((char *)&n, sizeof(n));
+    });
+
     m_impl->run();
+}
+
+bool InCppect::var(const TPath & path, TGetter && getter) {
+    m_impl->pathToGetter[path] = m_impl->getters.size();
+    m_impl->getters.emplace_back(std::move(getter));
+
+    return true;
 }

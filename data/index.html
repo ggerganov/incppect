@@ -25,6 +25,9 @@
 
                 // constants
                 k_requests_update_freq_ms: 1000,
+                k_var_prefix: 'this.vars',
+                k_var_suffix: '__abuf',
+                k_var_delim: ' ',
 
                 output: null,
 
@@ -37,14 +40,13 @@
                         path = path.replace('%d', arguments[i]);
                     }
 
-                    const kPrefix = 'this.vars';
-                    var full_path = kPrefix + '.' + path + '.__abuf';
+                    var full_path = this.k_var_prefix + '.' + path + '.' + this.k_var_suffix;
 
                     try {
                         eval('typeof ' + full_path);
                     } catch(err) {
                         var parts = path.split('.');
-                        var cur_path = kPrefix;
+                        var cur_path = this.k_var_prefix;
                         for (var i in parts) {
                             var tmp_path = cur_path + '.' + parts[i].replace(/\[\d*\]/g, '');
                             eval('if (typeof ' + tmp_path + ' === \'undefined\') { ' + tmp_path + ' = {}; }');
@@ -76,11 +78,29 @@
 
                 send_var_to_id_map: function() {
                     var msg = '';
+                    var delim = this.k_var_delim;
                     for (var key in this.var_to_id) {
-                        var keyp = key.replace(/^this\./, '').replace(/\.__abuf/, '');
-                        msg += keyp + '#' + this.var_to_id[key].toString() + '#';
+                        var keyp = key.replace(new RegExp('^' + this.k_var_prefix + '\.'), '').replace(new RegExp('\.' + this.k_var_suffix), '');
+                        var nidxs = 0;
+                        var idxs = delim;
+                        var keypp = keyp.replace(/\[\d*\]/g, function(m) { ++nidxs; idxs += m.replace(/[\[\]]/g, '') + delim; return '[%d]'; });
+                        msg += keypp + delim + this.var_to_id[key].toString() + delim + nidxs + idxs;
                     }
-                    this.ws.send(msg);
+                    console.log(msg);
+                    var data = new Int8Array(4 + msg.length + 1);
+                    data[0] = 1;
+                    //for (var i = 0; i < msg.length; ++i) data[4 + i] = msg[i];
+                    var enc = new TextEncoder();
+                    data.set(enc.encode(msg), 4);
+                    data[4 + msg.length] = 0;
+                    this.ws.send(data);
+                },
+
+                send_requests: function() {
+                    var data = new Int32Array(this.requests.length + 1);
+                    data.set(new Int32Array(this.requests), 1);
+                    data[0] = 2;
+                    this.ws.send(data);
                 },
             }
 
@@ -181,6 +201,7 @@
                         incpp.send_var_to_id_map();
                         incpp.requests_new_vars = false;
                     }
+                    incpp.send_requests();
                     incpp.t_requests_last_update_ms = incpp.timestamp();
                 }
 

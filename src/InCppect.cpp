@@ -171,12 +171,12 @@ struct InCppect::Impl {
                     printf("Update %d\n", req.getterId);
                     req.curData = getter(req.idxs);
                     req.tLastUpdated_ms = tCur;
+
+                    socketData[clientId]->ws->send({ (char *)(&requestId), sizeof(requestId) }, uWS::OpCode::BINARY);
+                    socketData[clientId]->ws->send(req.curData, uWS::OpCode::BINARY);
                 }
             }
         }
-    }
-
-    void push() {
     }
 
     int port = 3000;

@@ -29,6 +29,8 @@
                 k_var_suffix: '__abuf',
                 k_var_delim: ' ',
 
+                received_id: null,
+
                 output: null,
 
                 timestamp: function() {
@@ -89,7 +91,6 @@
                     console.log(msg);
                     var data = new Int8Array(4 + msg.length + 1);
                     data[0] = 1;
-                    //for (var i = 0; i < msg.length; ++i) data[4 + i] = msg[i];
                     var enc = new TextEncoder();
                     data.set(enc.encode(msg), 4);
                     data[4 + msg.length] = 0;
@@ -101,6 +102,10 @@
                     data.set(new Int32Array(this.requests), 1);
                     data[0] = 2;
                     this.ws.send(data);
+                },
+
+                receive: function(buf) {
+                    eval(this.id_to_var[this.received_id] + ' = buf.data;');
                 },
             }
 
@@ -143,8 +148,6 @@
                 o.appendChild(pre);
             }
 
-            //window.addEventListener("load", init, false);
-
             function vr_send() {
                 doSend(document.getElementById("data_to_send").value);
             }
@@ -163,9 +166,17 @@
                 incpp.output = document.getElementById("incppect");
 
                 incpp.ws = new WebSocket(incpp.wsUri);
+                incpp.ws.binaryType = 'arraybuffer';
                 incpp.ws.onopen = function(evt) { onOpen(evt) };
                 incpp.ws.onclose = function(evt) { onClose(evt) };
-                incpp.ws.onmessage = function(evt) { onMessage(evt); };
+                incpp.ws.onmessage = function(evt) {
+                    if (incpp.received_id === null) {
+                        incpp.received_id = new Int32Array(evt.data)[0];
+                    } else {
+                        incpp.receive(evt);
+                        incpp.received_id = null;
+                    }
+                };
                 incpp.ws.onerror = function(evt) { onError(evt) };
 
                 incpp.t_start_ms = incpp.timestamp();

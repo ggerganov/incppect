@@ -1,0 +1,205 @@
+<html>
+    <head>
+        <script language="javascript" type="text/javascript">
+            var output;
+            var incppect;
+
+            var incpp = {
+                ws: null,
+                wsUri: "ws://localhost:3000/data/test",
+
+                nvars: 0,
+                vars: {},
+                var_to_id: {},
+                id_to_var: {},
+
+                requests: [],
+                requests_old: [],
+                requests_new_vars: false,
+                requests_regenerate: true,
+
+                // timestamps
+                t_start_ms: null,
+                t_frame_begin_ms: null,
+                t_requests_last_update_ms: null,
+
+                // constants
+                k_requests_update_freq_ms: 1000,
+
+                output: null,
+
+                timestamp: function() {
+                    return window.performance && window.performance.now && window.performance.timing && window.performance.timing.navigationStart ? window.performance.now() + window.performance.timing.navigationStart : Date.now();
+                },
+
+                get: function(path) {
+                    for (var i = 1; i < arguments.length; i++) {
+                        path = path.replace('%d', arguments[i]);
+                    }
+
+                    const kPrefix = 'this.vars';
+                    var full_path = kPrefix + '.' + path + '.__abuf';
+
+                    try {
+                        eval('typeof ' + full_path);
+                    } catch(err) {
+                        var parts = path.split('.');
+                        var cur_path = kPrefix;
+                        for (var i in parts) {
+                            var tmp_path = cur_path + '.' + parts[i].replace(/\[\d*\]/g, '');
+                            eval('if (typeof ' + tmp_path + ' === \'undefined\') { ' + tmp_path + ' = {}; }');
+                            cur_path += '.' + parts[i];
+                            eval('if (typeof ' + cur_path + ' === \'undefined\') { ' + cur_path + ' = {}; }');
+                        }
+
+                        eval('if (typeof ' + full_path + ' === \'undefined\') { ' +
+                            full_path + ' = new ArrayBuffer(); ' +
+                            'this.var_to_id[\'' + full_path + '\'] = this.nvars;' +
+                            'this.id_to_var[this.nvars] = \'' + full_path + '\';' +
+                            '++this.nvars;' +
+                            '}');
+
+                        this.requests_new_vars = true;
+                    }
+
+                    if (this.requests_regenerate) {
+                        this.requests.push(this.var_to_id[full_path]);
+                    }
+
+                    return eval(full_path);
+                },
+
+                get_int: function(path) {
+                    var abuf = this.get.apply(this, arguments);
+                    return new Int32Array(abuf)[0];
+                },
+
+                send_var_to_id_map: function() {
+                    var msg = '';
+                    for (var key in this.var_to_id) {
+                        var keyp = key.replace(/^this\./, '').replace(/\.__abuf/, '');
+                        msg += keyp + '#' + this.var_to_id[key].toString() + '#';
+                    }
+                    this.ws.send(msg);
+                },
+            }
+
+            function onOpen(evt)
+            {
+                writeToScreen("CONNECTED", output);
+                doSend("WebSocket rocks");
+            }
+
+            function onClose(evt)
+            {
+                writeToScreen("DISCONNECTED", output);
+            }
+
+            function onMessage(evt)
+            {
+                writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>', output);
+            }
+
+            function onError(evt)
+            {
+                writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data, output);
+            }
+
+            function doSend(message)
+            {
+                writeToScreen("SENT: " + message, output);
+                incpp.ws.send(message);
+            }
+
+            function writeToScreen(message, o)
+            {
+                pre = document.createElement("p");
+                pre.style.wordWrap = "break-word";
+                pre.innerHTML = message;
+
+                if (o.childNodes.length > 5) {
+                    o.removeChild(o.childNodes[0]);
+                }
+                o.appendChild(pre);
+            }
+
+            //window.addEventListener("load", init, false);
+
+            function vr_send() {
+                doSend(document.getElementById("data_to_send").value);
+            }
+
+            function vr_send_binary() {
+                const array = new Float32Array(5);
+
+                for (var i = 0; i < array.length; ++i) {
+                    array[i] = i / 2;
+                }
+                doSend(array);
+            }
+
+            function _init() {
+                output = document.getElementById("output");
+                incpp.output = document.getElementById("incppect");
+
+                incpp.ws = new WebSocket(incpp.wsUri);
+                incpp.ws.onopen = function(evt) { onOpen(evt) };
+                incpp.ws.onclose = function(evt) { onClose(evt) };
+                incpp.ws.onmessage = function(evt) { onMessage(evt); };
+                incpp.ws.onerror = function(evt) { onError(evt) };
+
+                incpp.t_start_ms = incpp.timestamp();
+                incpp.t_requests_last_update_ms = incpp.timestamp() - incpp.k_requests_update_freq_ms;;
+
+                window.requestAnimationFrame(_loop);
+            }
+
+            function _loop() {
+                incpp.t_frame_begin_ms = incpp.timestamp();
+                incpp.requests_regenerate = incpp.t_frame_begin_ms - incpp.t_requests_last_update_ms > incpp.k_requests_update_freq_ms;
+
+                if (incpp.requests_regenerate) {
+                    incpp.requests_old = incpp.requests;
+                    incpp.requests = [];
+                }
+
+                var nClients = incpp.get_int('nClients');
+                var x = incpp.get_int('arr[%d].x', 10);
+
+                incpp.output.innerHTML = '<pre>vars: ' + JSON.stringify(incpp.vars) + '</pre>';
+                incpp.output.innerHTML += '<pre>var_to_id: ' + JSON.stringify(incpp.var_to_id) + '</pre>';
+                incpp.output.innerHTML += '<pre>requests_old: ' + JSON.stringify(incpp.requests_old) + '</pre>';
+                incpp.output.innerHTML += '<pre>requests: ' + JSON.stringify(incpp.requests) + '</pre>';
+                incpp.output.innerHTML += '<br>Start = ' + incpp.t_start_ms;
+                incpp.output.innerHTML += '<br>Frame begin = ' + incpp.t_frame_begin_ms;
+                incpp.output.innerHTML += '<br>Clients = ' + nClients;
+
+                if (incpp.requests_regenerate) {
+                    console.log("Requests regenerated");
+                    if (incpp.requests_new_vars) {
+                        console.log("   - New request vars");
+                        incpp.send_var_to_id_map();
+                        incpp.requests_new_vars = false;
+                    }
+                    incpp.t_requests_last_update_ms = incpp.timestamp();
+                }
+
+                window.requestAnimationFrame(_loop);
+            }
+
+            window.requestAnimationFrame(_init);
+    </script>
+</head>
+
+<body>
+<h2>WebSocket Test</h2>
+
+<input type="text" id="data_to_send" value="hello"></input>
+<button id="sender" onClick="vr_send()">Send</button>
+<button id="sender_binary" onClick="vr_send_binary()">Send Binary</button>
+
+<div id="incppect"></div>
+
+<div id="output"></div>
+</body>
+</html>

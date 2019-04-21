@@ -3,81 +3,80 @@
  *  \author Georgi Gerganov
  */
 
-#include "App.h" // uWebSockets
 #include "Common.h"
+#include "InCppect.h"
 
 #include <thread>
-#include <map>
 
-const int kPort = 3000;
+// root.
+//      name = "some string"
+//      nrooms = 10
+//      room[0].
+//              nparticles = 10
+//              buffer (size = 1024)
+//              particle[0].
+//                          x
+//                          y
+//                          z
+//              particle[1].
+//                          x
+//                          y
+//                          z
+//              ...
+//              particle[9].
+//                          x
+//                          y
+//                          z
+//      ...
+//      room[9].
+//              nparticles = 10
+//              particle[0].
+//                          x
+//                          y
+//                          z
+//              particle[1].
+//                          x
+//                          y
+//                          z
+//              ...
+//              particle[9].
+//                          x
+//                          y
+//                          z
+//
+// using TBuffer = std::pair<const char *, size_t>;
+//
+// incppect_define("root.name",                     [&]()->TBuffer { return { someStr.data(), someStr.size() } );
+// incppect_define("root.nrooms",                   [&]()->TBuffer { return { &nrooms, sizeof(nrooms) } );
+// incppect_define("root.nroom[%d].nparticles",     [&](int i0)->TBuffer { return { &room[i0].nparticles, sizeof(room[i0].nparticles) } );
+// incppect_define("root.nroom[%d].particle[%d].x", [&](int i0, int i1)->TBuffer { return { &room[i0].particle[i1].x, sizeof(room[i0].particles[i1].x) } );
+// incppect_define("root.nroom[%d].buffer",         [&](int i0)->TBuffer { return { &room[i0].buffer.data(), sizeof(room[i0].buffer[0])*room[i0].buffer.size() } );
+//
+//
+//
+// incppect("root", &someData);
+//
+//
+//
 
 int main() {
-    /* ws->getUserData returns one of these */
-    struct PerSocketData {
-        int clientId = 0;
+    InCppect inCppect;
+    inCppect.init(3000);
 
-        uWS::Loop * mainLoop = nullptr;
-        uWS::WebSocket<false, true> * ws = nullptr;
-    };
-
-    std::map<int, PerSocketData *> wsClients;
-
-    auto server = [&]() {
-        uWS::App().ws<PerSocketData>("/data/test", {
-            .compression = uWS::SHARED_COMPRESSOR,
-                .maxPayloadLength = 16 * 1024,
-                .open = [&](auto *ws, auto *req) {
-                    static int uniqueId = 1;
-                    ++uniqueId;
-
-                    auto perSocketData = (PerSocketData *) ws->getUserData();
-                    perSocketData->clientId = uniqueId;
-                    perSocketData->ws = ws;
-                    perSocketData->mainLoop = uWS::Loop::get();
-                    wsClients.insert({ uniqueId, perSocketData });
-
-                    std::cout << "[+] Client with Id = " << perSocketData->clientId  << " connected\n";
-                },
-                .message = [](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                    ws->send(message, opCode);
-                },
-                .drain = [](auto *ws) {
-                    /* Check getBufferedAmount here */
-                },
-                .ping = [](auto *ws) {
-
-                },
-                .pong = [](auto *ws) {
-
-                },
-                .close = [&](auto *ws, int code, std::string_view message) {
-                    auto perSocketData = (PerSocketData *) ws->getUserData();
-                    std::cout << "[+] Client with Id = " << perSocketData->clientId  << " disconnected\n";
-
-                    wsClients.erase(perSocketData->clientId);
-                }
-        }).get("/*", [](auto *res, auto *req) {
-            res->end(kPageIndex);
-        }).listen(kPort, [](auto *token) {
-            if (token) {
-                std::cout << "Listening on port " << kPort << std::endl;
-            }
-        }).run();
-    };
-
-    std::thread worker(server);
+    std::thread worker([&](){ inCppect.run(); });
 
     while (true) {
         int a = rand()%10000;
-        for (auto & [_, wsData] : wsClients) {
-            if (wsData->mainLoop && wsData->ws) {
-                wsData->mainLoop->defer([&, ws = wsData->ws]() {
-                    ws->send("Connected clients: " + std::to_string(wsClients.size()), uWS::OpCode::TEXT);
-                });
-            }
-        }
+        //for (auto & [_, wsData] : wsClients) {
+        //    if (wsData->mainLoop && wsData->ws) {
+        //        wsData->mainLoop->defer([&, ws = wsData->ws]() {
+        //            ws->send("Connected clients: " + std::to_string(wsClients.size()), uWS::OpCode::TEXT);
+        //            ws->send("Rand " + std::to_string(a), uWS::OpCode::TEXT);
+        //        });
+        //    }
+        //}
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
 
     worker.join();

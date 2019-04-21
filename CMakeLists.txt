@@ -17,7 +17,7 @@ find_package(Threads REQUIRED)
 find_package(ZLIB REQUIRED)
 
 if (APPLE)
-find_package(LibUV REQUIRED)
+    find_package(LibUV REQUIRED)
 endif ()
 
 add_subdirectory(third_party)

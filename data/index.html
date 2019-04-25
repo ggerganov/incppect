@@ -10,6 +10,7 @@
 
                 nvars: 0,
                 vars: {},
+                vars_map: {},
                 var_to_id: {},
                 id_to_var: {},
 
@@ -44,9 +45,7 @@
 
                     var full_path = this.k_var_prefix + '.' + path + '.' + this.k_var_suffix;
 
-                    try {
-                        eval('typeof ' + full_path);
-                    } catch(err) {
+                    if (!(path in this.vars_map)) {
                         var parts = path.split('.');
                         var cur_path = this.k_var_prefix;
                         for (var i in parts) {
@@ -58,8 +57,9 @@
 
                         eval('if (typeof ' + full_path + ' === \'undefined\') { ' +
                             full_path + ' = new ArrayBuffer(); ' +
+                            'this.vars_map[path] = new ArrayBuffer(); ' +
                             'this.var_to_id[\'' + full_path + '\'] = this.nvars;' +
-                            'this.id_to_var[this.nvars] = \'' + full_path + '\';' +
+                            'this.id_to_var[this.nvars] = \'' + path + '\';' +
                             '++this.nvars;' +
                             '}');
 
@@ -70,12 +70,17 @@
                         this.requests.push(this.var_to_id[full_path]);
                     }
 
-                    return eval(full_path);
+                    return this.vars_map[path];
                 },
 
                 get_int: function(path) {
                     var abuf = this.get.apply(this, arguments);
                     return new Int32Array(abuf)[0];
+                },
+
+                get_float: function(path) {
+                    var abuf = this.get.apply(this, arguments);
+                    return new Float32Array(abuf)[0];
                 },
 
                 send_var_to_id_map: function() {
@@ -98,14 +103,32 @@
                 },
 
                 send_requests: function() {
-                    var data = new Int32Array(this.requests.length + 1);
-                    data.set(new Int32Array(this.requests), 1);
-                    data[0] = 2;
-                    this.ws.send(data);
+                    var same = true;
+                    if (this.requests.length !== this.requests_old.length){
+                        same = false;
+                    } else {
+                        for (var i = 0; i < this.requests.length; ++i) {
+                            if (this.requests[i] !== this.requests_old[i]) {
+                                same = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (same) {
+                        var data = new Int32Array(1);
+                        data[0] = 3;
+                        this.ws.send(data);
+                    } else {
+                        var data = new Int32Array(this.requests.length + 1);
+                        data.set(new Int32Array(this.requests), 1);
+                        data[0] = 2;
+                        this.ws.send(data);
+                    }
                 },
 
                 receive: function(buf) {
-                    eval(this.id_to_var[this.received_id] + ' = buf.data;');
+                    this.vars_map[this.id_to_var[this.received_id]] = buf.data;
                 },
             }
 
@@ -161,7 +184,7 @@
                 doSend(array);
             }
 
-            function _init() {
+            function init() {
                 output = document.getElementById("output");
                 incpp.output = document.getElementById("incppect");
 
@@ -182,10 +205,55 @@
                 incpp.t_start_ms = incpp.timestamp();
                 incpp.t_requests_last_update_ms = incpp.timestamp() - incpp.k_requests_update_freq_ms;;
 
-                window.requestAnimationFrame(_loop);
+                window.requestAnimationFrame(loop);
             }
 
-            function _loop() {
+            function render() {
+                var nClients = incpp.get_int('nClients');
+                var x = incpp.get_int('arr[%d].x', 10);
+
+                var nCircles = incpp.get_int('state.nCircles');
+
+				incpp.output.innerHTML = '<br>Clients = ' + nClients;
+				incpp.output.innerHTML += '<br>nCircles = ' + nCircles;
+
+                var canvas = document.getElementById("myCanvas");
+                var width = canvas.width;
+                var height = canvas.height;
+                var ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, width, height);
+                for (var i = 0; i < nCircles; ++i) {
+                    var x = incpp.get_float('state.circle[%d].x', i);
+                    var y = incpp.get_float('state.circle[%d].y', i);
+                    var vx = incpp.get_float('state.circle[%d].vx', i);
+                    var vy = incpp.get_float('state.circle[%d].vy', i);
+
+                    //var x = (Math.random() * 2.0000 - 1.0000);
+                    //var y = (Math.random() * 2.0000 - 1.0000);
+                    //var vx = (Math.random() * 2.0000 - 1.0000);
+                    //var vy = (Math.random() * 2.0000 - 1.0000);
+
+					//incpp.output.innerHTML += '<pre>Circle ' + i + ': x = ' + x + ', y = ' + y + '</pre>';
+
+                    ctx.beginPath();
+                    ctx.arc(0.5*(1.0 + x)*width, 0.5*(1.0 + y)*height, 10.0, 0, 2 * Math.PI);
+                    ctx.stroke();
+                }
+
+                //incpp.output.innerHTML = '<pre>vars: ' + JSON.stringify(incpp.vars) + '</pre>';
+                //incpp.output.innerHTML += '<pre>var_to_id: ' + JSON.stringify(incpp.var_to_id) + '</pre>';
+                //incpp.output.innerHTML += '<pre>requests_old: ' + JSON.stringify(incpp.requests_old) + '</pre>';
+                //incpp.output.innerHTML += '<pre>requests: ' + JSON.stringify(incpp.requests) + '</pre>';
+                //incpp.output.innerHTML += '<br>Start = ' + incpp.t_start_ms;
+                //incpp.output.innerHTML += '<br>Frame begin = ' + incpp.t_frame_begin_ms;
+                //incpp.output.innerHTML += '<br>Clients = ' + nClients;
+            }
+
+            function loop() {
+				if (incpp.ws.readyState !== incpp.ws.OPEN) {
+					window.requestAnimationFrame(loop);
+				}
+
                 incpp.t_frame_begin_ms = incpp.timestamp();
                 incpp.requests_regenerate = incpp.t_frame_begin_ms - incpp.t_requests_last_update_ms > incpp.k_requests_update_freq_ms;
 
@@ -194,19 +262,9 @@
                     incpp.requests = [];
                 }
 
-                var nClients = incpp.get_int('nClients');
-                var x = incpp.get_int('arr[%d].x', 10);
-
-                incpp.output.innerHTML = '<pre>vars: ' + JSON.stringify(incpp.vars) + '</pre>';
-                incpp.output.innerHTML += '<pre>var_to_id: ' + JSON.stringify(incpp.var_to_id) + '</pre>';
-                incpp.output.innerHTML += '<pre>requests_old: ' + JSON.stringify(incpp.requests_old) + '</pre>';
-                incpp.output.innerHTML += '<pre>requests: ' + JSON.stringify(incpp.requests) + '</pre>';
-                incpp.output.innerHTML += '<br>Start = ' + incpp.t_start_ms;
-                incpp.output.innerHTML += '<br>Frame begin = ' + incpp.t_frame_begin_ms;
-                incpp.output.innerHTML += '<br>Clients = ' + nClients;
+                render();
 
                 if (incpp.requests_regenerate) {
-                    console.log("Requests regenerated");
                     if (incpp.requests_new_vars) {
                         console.log("   - New request vars");
                         incpp.send_var_to_id_map();
@@ -216,10 +274,10 @@
                     incpp.t_requests_last_update_ms = incpp.timestamp();
                 }
 
-                window.requestAnimationFrame(_loop);
+                window.requestAnimationFrame(loop);
             }
 
-            window.requestAnimationFrame(_init);
+            window.requestAnimationFrame(init);
     </script>
 </head>
 
@@ -231,6 +289,7 @@
 <button id="sender_binary" onClick="vr_send_binary()">Send Binary</button>
 
 <div id="incppect"></div>
+<canvas id="myCanvas" width="300" height="300" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
 
 <div id="output"></div>
 </body>

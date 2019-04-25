@@ -7,7 +7,9 @@
 
 #include <memory>
 #include <functional>
+#include <string>
 #include <string_view>
+#include <thread>
 
 class InCppect {
     public:
@@ -20,8 +22,19 @@ class InCppect {
 
         bool init(int port);
         void run();
+        std::thread runAsync();
 
         bool var(const TPath & path, TGetter && getter);
+
+        template<typename T>
+            static std::string_view View(const T & v) {
+                return std::string_view { (char *)(&v), sizeof(v) };
+            }
+
+        static InCppect & getInstance() {
+            static InCppect instance;
+            return instance;
+        }
 
     private:
         struct Impl;

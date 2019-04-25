@@ -36,6 +36,7 @@ struct InCppect::Impl {
     struct ClientData {
         int64_t tConnected_ms = -1;
 
+        std::vector<int> lastRequests;
         std::map<int, Request> requests;
     };
 
@@ -104,10 +105,13 @@ struct InCppect::Impl {
                                     }
 
                                     if (pathToGetter.find(path) != pathToGetter.end()) {
-                                        cd.requests[requestId].getterId = pathToGetter[path];
-                                    }
+                                        printf("requestId = %d, path = '%s', nidxs = %d\n", requestId, path.c_str(), nidxs);
+                                        request.getterId = pathToGetter[path];
 
-                                    printf("requestId = %d, path = '%s'\n", requestId, path.c_str());
+                                        cd.requests[requestId] = std::move(request);
+                                    } else {
+                                        printf("Missing path '%s'\n", path.c_str());
+                                    }
                                 }
                             }
                             break;
@@ -116,8 +120,19 @@ struct InCppect::Impl {
                                 int nRequests = (message.size() - sizeof(int))/sizeof(int);
                                 std::cout << "Received requests: " << nRequests << std::endl;
 
+                                cd.lastRequests.clear();
                                 for (int i = 0; i < nRequests; ++i) {
                                     int curRequest = p[i + 1];
+                                    if (cd.requests.find(curRequest) != cd.requests.end()) {
+                                        cd.lastRequests.push_back(curRequest);
+                                        cd.requests[curRequest].tLastRequested_ms = ::timestamp();
+                                    }
+                                }
+                            }
+                            break;
+                        case 3:
+                            {
+                                for (auto curRequest : cd.lastRequests) {
                                     if (cd.requests.find(curRequest) != cd.requests.end()) {
                                         cd.requests[curRequest].tLastRequested_ms = ::timestamp();
                                     }
@@ -127,7 +142,6 @@ struct InCppect::Impl {
                         default:
                             std::cout << "Unknown message type = " << type << std::endl;
                     };
-                    //ws->send(message, opCode);
                     sd->mainLoop->defer([this]() { this->update(); });
                 },
                 .drain = [](auto *ws) {
@@ -168,7 +182,9 @@ struct InCppect::Impl {
                 auto tCur = ::timestamp();
                 if (tCur - req.tLastRequested_ms < req.tLastRequestTimeout_ms &&
                     tCur - req.tLastUpdated_ms > req.tMinUpdate_ms) {
-                    printf("Update %d\n", req.getterId);
+                    //printf("Update %d, idxs.size() = %d -> ", req.getterId, (int) req.idxs.size());
+                    //for (auto & idx : req.idxs) printf("%d ", idx);
+                    //printf("\n");
                     req.curData = getter(req.idxs);
                     req.tLastUpdated_ms = tCur;
 
@@ -207,6 +223,11 @@ void InCppect::run() {
     });
 
     m_impl->run();
+}
+
+std::thread InCppect::runAsync() {
+    std::thread worker([this](){ this->run(); });
+    return worker;
 }
 
 bool InCppect::var(const TPath & path, TGetter && getter) {

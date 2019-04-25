@@ -3,83 +3,74 @@
  *  \author Georgi Gerganov
  */
 
-#include "Common.h"
 #include "InCppect.h"
 
-#include <thread>
+#include <vector>
+#include <cstdlib>
 
-// root.
-//      name = "some string"
-//      nrooms = 10
-//      room[0].
-//              nparticles = 10
-//              buffer (size = 1024)
-//              particle[0].
-//                          x
-//                          y
-//                          z
-//              particle[1].
-//                          x
-//                          y
-//                          z
-//              ...
-//              particle[9].
-//                          x
-//                          y
-//                          z
-//      ...
-//      room[9].
-//              nparticles = 10
-//              particle[0].
-//                          x
-//                          y
-//                          z
-//              particle[1].
-//                          x
-//                          y
-//                          z
-//              ...
-//              particle[9].
-//                          x
-//                          y
-//                          z
-//
-// using TBuffer = std::pair<const char *, size_t>;
-//
-// incppect_define("root.name",                     [&]()->TBuffer { return { someStr.data(), someStr.size() } );
-// incppect_define("root.nrooms",                   [&]()->TBuffer { return { &nrooms, sizeof(nrooms) } );
-// incppect_define("root.nroom[%d].nparticles",     [&](int i0)->TBuffer { return { &room[i0].nparticles, sizeof(room[i0].nparticles) } );
-// incppect_define("root.nroom[%d].particle[%d].x", [&](int i0, int i1)->TBuffer { return { &room[i0].particle[i1].x, sizeof(room[i0].particles[i1].x) } );
-// incppect_define("root.nroom[%d].buffer",         [&](int i0)->TBuffer { return { &room[i0].buffer.data(), sizeof(room[i0].buffer[0])*room[i0].buffer.size() } );
-//
-//
-//
-// incppect("root", &someData);
-//
-//
-//
+inline float frand() { return (float)(rand())/RAND_MAX; }
 
-int main() {
-    InCppect inCppect;
-    inCppect.init(3000);
+struct Circle {
+    float x = 0.0f;
+    float y = 0.0f;
 
-    std::thread worker([&](){ inCppect.run(); });
+    float vx = 0.0f;
+    float vy = 0.0f;
+};
 
-    while (true) {
-        int a = rand()%10000;
-        //for (auto & [_, wsData] : wsClients) {
-        //    if (wsData->mainLoop && wsData->ws) {
-        //        wsData->mainLoop->defer([&, ws = wsData->ws]() {
-        //            ws->send("Connected clients: " + std::to_string(wsClients.size()), uWS::OpCode::TEXT);
-        //            ws->send("Rand " + std::to_string(a), uWS::OpCode::TEXT);
-        //        });
-        //    }
-        //}
+struct State {
+    State() {
+        InCppect::getInstance().var("state.dt", [this](const auto & idxs) { return InCppect::View(dt); });
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(15));
+        InCppect::getInstance().var("state.nCircles", [this](const auto & idxs) {
+            static int n = 0;
+            n = circles.size();
+            return InCppect::View(n);
+        });
+
+        InCppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].x); });
+        InCppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].y); });
+        InCppect::getInstance().var("state.circle[%d].vx", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].vx); });
+        InCppect::getInstance().var("state.circle[%d].vy", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].vy); });
     }
 
-    worker.join();
+    void init(int nCircles) {
+        circles.resize(nCircles);
+        for (auto & circle : circles) {
+            circle.x = 2.0f*frand() - 1.0f;
+            circle.y = 2.0f*frand() - 1.0f;
+
+            circle.vx = 2.0f*frand() - 1.0f;
+            circle.vy = 2.0f*frand() - 1.0f;
+        }
+    }
+
+    float dt = 0.001f;
+
+    std::vector<Circle> circles;
+};
+
+int main(int argc, char ** argv) {
+	printf("Usage: %s [nCircles]\n", argv[0]);
+    int nCircles = argc > 0 ? atoi(argv[1]) : 256;
+
+    State state;
+    state.init(nCircles);
+
+    InCppect::getInstance().init(3000);
+    InCppect::getInstance().runAsync().detach();
+
+    while (true) {
+        for (auto & circle : state.circles) {
+            circle.x += circle.vx*state.dt;
+            circle.y += circle.vy*state.dt;
+
+            if (circle.x < -1.0f || circle.x > 1.0f) circle.vx = -circle.vx;
+            if (circle.y < -1.0f || circle.y > 1.0f) circle.vy = -circle.vy;
+        }
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
 
     return 0;
 }

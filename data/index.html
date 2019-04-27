@@ -30,8 +30,6 @@
                 k_var_suffix: '__abuf',
                 k_var_delim: ' ',
 
-                //received_id: null,
-
                 output: null,
 
                 timestamp: function() {
@@ -238,7 +236,7 @@
                     var vy = incpp.get_float('state.circle[%d].vy', i);
 
                     ctx.beginPath();
-                    ctx.arc(0.5*(1.0 + x)*width, 0.5*(1.0 + y)*height, width*r, 0, 2 * Math.PI);
+                    ctx.arc(0.5*(1.0 + x)*width, 0.5*(1.0 + y)*height, 0.5*width*r, 0, 2 * Math.PI);
                     ctx.stroke();
                 }
 

@@ -25,7 +25,7 @@
                 t_requests_last_update_ms: null,
 
                 // constants
-                k_requests_update_freq_ms: 1000,
+                k_requests_update_freq_ms: 100,
                 k_var_prefix: 'this.vars',
                 k_var_suffix: '__abuf',
                 k_var_delim: ' ',
@@ -93,7 +93,7 @@
                         var keypp = keyp.replace(/\[\d*\]/g, function(m) { ++nidxs; idxs += m.replace(/[\[\]]/g, '') + delim; return '[%d]'; });
                         msg += keypp + delim + this.var_to_id[key].toString() + delim + nidxs + idxs;
                     }
-                    console.log(msg);
+                    //console.log(msg);
                     var data = new Int8Array(4 + msg.length + 1);
                     data[0] = 1;
                     var enc = new TextEncoder();
@@ -260,9 +260,9 @@
                 if (incpp.requests_regenerate) {
                     incpp.requests_old = incpp.requests;
                     incpp.requests = [];
-                }
 
-                render();
+                    render();
+                }
 
                 if (incpp.requests_regenerate) {
                     if (incpp.requests_new_vars) {

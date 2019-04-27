@@ -56,7 +56,7 @@ struct InCppect::Impl {
 
         uWS::App().ws<PerSocketData>("/data/test", {
             .compression = uWS::SHARED_COMPRESSOR,
-                .maxPayloadLength = 16*1024,
+                .maxPayloadLength = 256*1024,
                 .open = [&](auto *ws, auto *req) {
                     static int uniqueId = 1;
                     ++uniqueId;
@@ -72,7 +72,7 @@ struct InCppect::Impl {
                     std::cout << "[+] Client with Id = " << sd->clientId  << " connected\n";
                 },
                 .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                    std::cout << "Received message size = " << message.size() << std::endl;
+                    //std::cout << "Received message size = " << message.size() << std::endl;
                     if (message.size() < sizeof(int)) {
                         return;
                     }

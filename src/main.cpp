@@ -51,7 +51,7 @@ struct State {
         circles.resize(nCircles);
         for (int i = 0; i < nCircles; ++i) {
             auto & circle = circles[i];
-            circle.r = 0.02f*frand() + 0.02f;
+            circle.r = 0.05f*frand() + 0.02f;
             circle.m = circle.r*circle.r;
 
             circle.x = 2.0f*frand() - 1.0f;
@@ -96,28 +96,32 @@ int main(int argc, char ** argv) {
                 float d2 = ::dist2(c0, c1);
                 if (d2 > ::dist2(c0.r, c1.r)) continue;
 
+                float nx = c0.x - c1.x;
+                float ny = c0.y - c1.y;
+                float d = sqrt(d2);
+                nx /= d;
+                ny /= d;
+
+                float dvx = c0.vx - c1.vx;
+                float dvy = c0.vy - c1.vy;
                 float norm = 1.0f/(c0.m + c1.m);
-                float vx0 = (c0.m - c1.m)*norm*c0.vx + 2.0f*c1.m*norm*c1.vx;
-                float vy0 = (c0.m - c1.m)*norm*c0.vy + 2.0f*c1.m*norm*c1.vy;
-                float vx1 = 2.0f*c0.m*norm*c0.vx + (c1.m - c0.m)*norm*c1.vx;
-                float vy1 = 2.0f*c0.m*norm*c0.vy + (c1.m - c0.m)*norm*c1.vy;
+
+                float p = 2.0f*norm*(dvx*nx + dvy*ny);
+                float vx0 = c0.vx - c1.m*p*nx;
+                float vy0 = c0.vy - c1.m*p*ny;
+                float vx1 = c1.vx + c0.m*p*nx;
+                float vy1 = c1.vy + c0.m*p*ny;
 
                 c0.vx = vx0;
                 c0.vy = vy0;
                 c1.vx = vx1;
                 c1.vy = vy1;
 
-                float nx = c1.x - c0.x;
-                float ny = c1.y - c0.y;
-                float d = sqrt(d2);
-                nx /= d;
-                ny /= d;
-
                 float l = 1.01f*(c0.r + c1.r) - d;
 
                 float nv0 = c0.vx*nx + c0.vy*ny;
                 float nv1 = c1.vx*nx + c1.vy*ny;
-                float dt = l/(nv1 - nv0);
+                float dt = l/(nv0 - nv1);
 
                 c0.x += c0.vx*dt;
                 c0.y += c0.vy*dt;

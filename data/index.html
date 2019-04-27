@@ -6,7 +6,7 @@
 
             var incpp = {
                 ws: null,
-                wsUri: "ws://localhost:3000/data/test",
+                wsUri: 'ws://' + eval('window.location.hostname') + ':' + eval('window.location.port') + '/data/test',
 
                 nvars: 0,
                 vars: {},

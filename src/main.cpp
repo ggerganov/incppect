@@ -11,6 +11,8 @@
 inline float frand() { return (float)(rand())/RAND_MAX; }
 
 struct Circle {
+    float r = 0.0f;
+
     float x = 0.0f;
     float y = 0.0f;
 
@@ -28,6 +30,7 @@ struct State {
             return InCppect::View(n);
         });
 
+        InCppect::getInstance().var("state.circle[%d].r", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].r); });
         InCppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].x); });
         InCppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].y); });
         InCppect::getInstance().var("state.circle[%d].vx", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].vx); });
@@ -37,6 +40,8 @@ struct State {
     void init(int nCircles) {
         circles.resize(nCircles);
         for (auto & circle : circles) {
+            circle.r = 0.01f*frand() + 0.01f;
+
             circle.x = 2.0f*frand() - 1.0f;
             circle.y = 2.0f*frand() - 1.0f;
 

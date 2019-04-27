@@ -12,6 +12,7 @@
 #include <fstream>
 #include <chrono>
 #include <sstream>
+#include <algorithm>
 
 namespace {
     inline int64_t timestamp() {
@@ -23,7 +24,7 @@ struct InCppect::Impl {
     struct Request {
         int64_t tLastUpdated_ms = -1;
         int64_t tLastRequested_ms = -1;
-        int64_t tMinUpdate_ms = 100;
+        int64_t tMinUpdate_ms = 16;
         int64_t tLastRequestTimeout_ms = 3000;
 
         TIdxs idxs;
@@ -177,20 +178,41 @@ struct InCppect::Impl {
 
     void update() {
         for (auto & [clientId, cd] : clientData) {
+            std::vector<char> buffer;
             for (auto & [requestId, req] : cd.requests) {
                 auto & getter = getters[req.getterId];
                 auto tCur = ::timestamp();
                 if (tCur - req.tLastRequested_ms < req.tLastRequestTimeout_ms &&
                     tCur - req.tLastUpdated_ms > req.tMinUpdate_ms) {
-                    //printf("Update %d, idxs.size() = %d -> ", req.getterId, (int) req.idxs.size());
-                    //for (auto & idx : req.idxs) printf("%d ", idx);
-                    //printf("\n");
                     req.curData = getter(req.idxs);
                     req.tLastUpdated_ms = tCur;
 
-                    socketData[clientId]->ws->send({ (char *)(&requestId), sizeof(requestId) }, uWS::OpCode::BINARY);
-                    socketData[clientId]->ws->send(req.curData, uWS::OpCode::BINARY);
+                    const int kPadding = 4;
+
+                    int dataSize_bytes = req.curData.size();
+                    int padding_bytes = 0;
+                    {
+                        int r = dataSize_bytes%kPadding;
+                        while (r > 0 && r < kPadding) {
+                            ++dataSize_bytes;
+                            ++padding_bytes;
+                            ++r;
+                        }
+                    }
+
+                    std::copy((char *)(&requestId), (char *)(&requestId) + sizeof(requestId), std::back_inserter(buffer));
+                    std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
+                    std::copy(req.curData.begin(), req.curData.end(), std::back_inserter(buffer));
+                    {
+                        char v = 0;
+                        for (int i = 0; i < padding_bytes; ++i) {
+                            std::copy((char *)(&v), (char *)(&v) + sizeof(v), std::back_inserter(buffer));
+                        }
+                    }
                 }
+            }
+            if (buffer.size() > 0) {
+                socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY);
             }
         }
     }

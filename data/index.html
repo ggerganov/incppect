@@ -25,12 +25,12 @@
                 t_requests_last_update_ms: null,
 
                 // constants
-                k_requests_update_freq_ms: 100,
+                k_requests_update_freq_ms: 20,
                 k_var_prefix: 'this.vars',
                 k_var_suffix: '__abuf',
                 k_var_delim: ' ',
 
-                received_id: null,
+                //received_id: null,
 
                 output: null,
 
@@ -128,7 +128,20 @@
                 },
 
                 receive: function(buf) {
-                    this.vars_map[this.id_to_var[this.received_id]] = buf.data;
+                    var offset = 0;
+                    var offset_new = 0;
+                    var int_view = new Int32Array(buf.data);
+                    var total_size = buf.data.byteLength;
+                    var id = 0;
+                    var len = 0;
+                    while (4*offset < total_size) {
+                        id = int_view[offset];
+                        len = int_view[offset + 1];
+                        offset += 2;
+                        offset_new = offset + len/4;
+                        this.vars_map[this.id_to_var[id]] = buf.data.slice(4*offset, 4*offset_new);
+                        offset = offset_new;
+                    }
                 },
             }
 
@@ -193,12 +206,7 @@
                 incpp.ws.onopen = function(evt) { onOpen(evt) };
                 incpp.ws.onclose = function(evt) { onClose(evt) };
                 incpp.ws.onmessage = function(evt) {
-                    if (incpp.received_id === null) {
-                        incpp.received_id = new Int32Array(evt.data)[0];
-                    } else {
-                        incpp.receive(evt);
-                        incpp.received_id = null;
-                    }
+                    incpp.receive(evt);
                 };
                 incpp.ws.onerror = function(evt) { onError(evt) };
 
@@ -223,20 +231,14 @@
                 var ctx = canvas.getContext("2d");
                 ctx.clearRect(0, 0, width, height);
                 for (var i = 0; i < nCircles; ++i) {
+                    var r = incpp.get_float('state.circle[%d].r', i);
                     var x = incpp.get_float('state.circle[%d].x', i);
                     var y = incpp.get_float('state.circle[%d].y', i);
                     var vx = incpp.get_float('state.circle[%d].vx', i);
                     var vy = incpp.get_float('state.circle[%d].vy', i);
 
-                    //var x = (Math.random() * 2.0000 - 1.0000);
-                    //var y = (Math.random() * 2.0000 - 1.0000);
-                    //var vx = (Math.random() * 2.0000 - 1.0000);
-                    //var vy = (Math.random() * 2.0000 - 1.0000);
-
-					//incpp.output.innerHTML += '<pre>Circle ' + i + ': x = ' + x + ', y = ' + y + '</pre>';
-
                     ctx.beginPath();
-                    ctx.arc(0.5*(1.0 + x)*width, 0.5*(1.0 + y)*height, 10.0, 0, 2 * Math.PI);
+                    ctx.arc(0.5*(1.0 + x)*width, 0.5*(1.0 + y)*height, width*r, 0, 2 * Math.PI);
                     ctx.stroke();
                 }
 
@@ -252,6 +254,7 @@
             function loop() {
 				if (incpp.ws.readyState !== incpp.ws.OPEN) {
 					window.requestAnimationFrame(loop);
+                    return;
 				}
 
                 incpp.t_frame_begin_ms = incpp.timestamp();

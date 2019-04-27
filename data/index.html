@@ -219,9 +219,13 @@
                 var x = incpp.get_int('arr[%d].x', 10);
 
                 var nCircles = incpp.get_int('state.nCircles');
+                var dt = incpp.get_float('state.dt');
+                var energy = incpp.get_float('state.energy');
 
 				incpp.output.innerHTML = '<br>Clients = ' + nClients;
 				incpp.output.innerHTML += '<br>nCircles = ' + nCircles;
+				incpp.output.innerHTML += '<br>dt = ' + dt;
+				incpp.output.innerHTML += '<br>energy = ' + energy;
 
                 var canvas = document.getElementById("myCanvas");
                 var width = canvas.width;

@@ -40,6 +40,9 @@ struct State {
             return InCppect::View(n);
         });
 
+        InCppect::getInstance().var("state.dt", [this](const auto & idxs) { return InCppect::View(dt); });
+        InCppect::getInstance().var("state.energy", [this](const auto & idxs) { return InCppect::View(energy); });
+
         InCppect::getInstance().var("state.circle[%d].r", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].r); });
         InCppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].x); });
         InCppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].y); });
@@ -63,6 +66,7 @@ struct State {
     }
 
     float dt = 0.001f;
+    float energy = 0.0f;
 
     std::vector<Circle> circles;
 };
@@ -78,6 +82,7 @@ int main(int argc, char ** argv) {
     InCppect::getInstance().runAsync().detach();
 
     while (true) {
+        float energy = 0.0;
         for (auto & circle : state.circles) {
             circle.x += circle.vx*state.dt;
             circle.y += circle.vy*state.dt;
@@ -86,7 +91,11 @@ int main(int argc, char ** argv) {
             if (circle.y - circle.r < -1.0f) circle.vy =  std::abs(circle.vy);
             if (circle.x + circle.r >  1.0f) circle.vx = -std::abs(circle.vx);
             if (circle.y + circle.r >  1.0f) circle.vy = -std::abs(circle.vy);
+
+            energy += circle.m*(circle.vx*circle.vx + circle.vy*circle.vy);
         }
+
+        state.energy = energy;
 
         for (int i = 0; i < state.circles.size(); ++i) {
             auto & c0 = state.circles[i];

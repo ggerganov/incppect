@@ -9,7 +9,6 @@
                 wsUri: 'ws://' + eval('window.location.hostname') + ':' + eval('window.location.port') + '/data/test',
 
                 nvars: 0,
-                vars: {},
                 vars_map: {},
                 var_to_id: {},
                 id_to_var: {},
@@ -26,8 +25,6 @@
 
                 // constants
                 k_requests_update_freq_ms: 20,
-                k_var_prefix: 'this.vars',
-                k_var_suffix: '__abuf',
                 k_var_delim: ' ',
 
                 output: null,
@@ -41,31 +38,17 @@
                         path = path.replace('%d', arguments[i]);
                     }
 
-                    var full_path = this.k_var_prefix + '.' + path + '.' + this.k_var_suffix;
-
                     if (!(path in this.vars_map)) {
-                        var parts = path.split('.');
-                        var cur_path = this.k_var_prefix;
-                        for (var i in parts) {
-                            var tmp_path = cur_path + '.' + parts[i].replace(/\[\d*\]/g, '');
-                            eval('if (typeof ' + tmp_path + ' === \'undefined\') { ' + tmp_path + ' = {}; }');
-                            cur_path += '.' + parts[i];
-                            eval('if (typeof ' + cur_path + ' === \'undefined\') { ' + cur_path + ' = {}; }');
-                        }
-
-                        eval('if (typeof ' + full_path + ' === \'undefined\') { ' +
-                            full_path + ' = new ArrayBuffer(); ' +
-                            'this.vars_map[path] = new ArrayBuffer(); ' +
-                            'this.var_to_id[\'' + full_path + '\'] = this.nvars;' +
-                            'this.id_to_var[this.nvars] = \'' + path + '\';' +
-                            '++this.nvars;' +
-                            '}');
+                        this.vars_map[path] = new ArrayBuffer();
+                        this.var_to_id[path] = this.nvars;
+                        this.id_to_var[this.nvars] = path;
+                        ++this.nvars;
 
                         this.requests_new_vars = true;
                     }
 
                     if (this.requests_regenerate) {
-                        this.requests.push(this.var_to_id[full_path]);
+                        this.requests.push(this.var_to_id[path]);
                     }
 
                     return this.vars_map[path];
@@ -85,13 +68,11 @@
                     var msg = '';
                     var delim = this.k_var_delim;
                     for (var key in this.var_to_id) {
-                        var keyp = key.replace(new RegExp('^' + this.k_var_prefix + '\.'), '').replace(new RegExp('\.' + this.k_var_suffix), '');
                         var nidxs = 0;
                         var idxs = delim;
-                        var keypp = keyp.replace(/\[\d*\]/g, function(m) { ++nidxs; idxs += m.replace(/[\[\]]/g, '') + delim; return '[%d]'; });
-                        msg += keypp + delim + this.var_to_id[key].toString() + delim + nidxs + idxs;
+                        var keyp = key.replace(/\[\d*\]/g, function(m) { ++nidxs; idxs += m.replace(/[\[\]]/g, '') + delim; return '[%d]'; });
+                        msg += keyp + delim + this.var_to_id[key].toString() + delim + nidxs + idxs;
                     }
-                    //console.log(msg);
                     var data = new Int8Array(4 + msg.length + 1);
                     data[0] = 1;
                     var enc = new TextEncoder();
@@ -146,7 +127,6 @@
             function onOpen(evt)
             {
                 writeToScreen("CONNECTED", output);
-                doSend("WebSocket rocks");
             }
 
             function onClose(evt)
@@ -224,8 +204,8 @@
 
 				incpp.output.innerHTML = '<br>Clients = ' + nClients;
 				incpp.output.innerHTML += '<br>nCircles = ' + nCircles;
-				incpp.output.innerHTML += '<br>dt = ' + dt;
-				incpp.output.innerHTML += '<br>energy = ' + energy;
+				incpp.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
+				incpp.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
 
                 var canvas = document.getElementById("myCanvas");
                 var width = canvas.width;
@@ -244,7 +224,6 @@
                     ctx.stroke();
                 }
 
-                //incpp.output.innerHTML = '<pre>vars: ' + JSON.stringify(incpp.vars) + '</pre>';
                 //incpp.output.innerHTML += '<pre>var_to_id: ' + JSON.stringify(incpp.var_to_id) + '</pre>';
                 //incpp.output.innerHTML += '<pre>requests_old: ' + JSON.stringify(incpp.requests_old) + '</pre>';
                 //incpp.output.innerHTML += '<pre>requests: ' + JSON.stringify(incpp.requests) + '</pre>';
@@ -266,7 +245,11 @@
                     incpp.requests_old = incpp.requests;
                     incpp.requests = [];
 
-                    render();
+                    try {
+                        render();
+                    } catch(err) {
+                        incpp.output.innerHTML = 'Failed to render state: ' + err;
+                    }
                 }
 
                 if (incpp.requests_regenerate) {

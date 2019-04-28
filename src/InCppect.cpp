@@ -55,7 +55,7 @@ struct InCppect::Impl {
     void run() {
         mainLoop = uWS::Loop::get();
 
-        uWS::App().ws<PerSocketData>("/data/test", {
+        uWS::App().ws<PerSocketData>("/incppect", {
             .compression = uWS::SHARED_COMPRESSOR,
                 .maxPayloadLength = 256*1024,
                 .open = [&](auto *ws, auto *req) {
@@ -210,6 +210,9 @@ struct InCppect::Impl {
                         }
                     }
                 }
+            }
+            if (socketData[clientId]->ws->getBufferedAmount()) {
+                std::cout << "  [update] Buffered amount = " << socketData[clientId]->ws->getBufferedAmount() << std::endl;
             }
             if (buffer.size() > 0) {
                 socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY);

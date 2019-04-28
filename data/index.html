@@ -1,18 +1,18 @@
 <html>
     <head>
         <script language="javascript" type="text/javascript">
-            var output;
-            var incppect;
-
             var incpp = {
+                // websocket data
                 ws: null,
-                wsUri: 'ws://' + eval('window.location.hostname') + ':' + eval('window.location.port') + '/data/test',
+                ws_uri: 'ws://' + window.location.hostname + ':' + window.location.port + '/incppect',
 
+                // vars data
                 nvars: 0,
                 vars_map: {},
                 var_to_id: {},
                 id_to_var: {},
 
+                // requests data
                 requests: [],
                 requests_old: [],
                 requests_new_vars: false,
@@ -24,13 +24,70 @@
                 t_requests_last_update_ms: null,
 
                 // constants
-                k_requests_update_freq_ms: 20,
                 k_var_delim: ' ',
+                k_requests_update_freq_ms: 50,
 
                 output: null,
 
                 timestamp: function() {
-                    return window.performance && window.performance.now && window.performance.timing && window.performance.timing.navigationStart ? window.performance.now() + window.performance.timing.navigationStart : Date.now();
+                    return window.performance && window.performance.now && window.performance.timing &&
+                        window.performance.timing.navigationStart ? window.performance.now() + window.performance.timing.navigationStart : Date.now();
+                },
+
+                init: function() {
+                    this.output = document.getElementById("incppect");
+
+                    var onclose = this.onclose.bind(this);
+                    var onmessage = this.onmessage.bind(this);
+
+                    this.ws = new WebSocket(this.ws_uri);
+                    this.ws.binaryType = 'arraybuffer';
+                    this.ws.onopen = function(evt) { };
+                    this.ws.onclose = function(evt) { onclose(evt) };
+                    this.ws.onmessage = function(evt) { onmessage(evt) };
+                    this.ws.onerror = function(evt) { };
+
+                    this.t_start_ms = this.timestamp();
+                    this.t_requests_last_update_ms = this.timestamp() - this.k_requests_update_freq_ms;
+
+                    window.requestAnimationFrame(this.loop.bind(this));
+                },
+
+                loop: function() {
+                    if (this.ws == null) {
+                        setTimeout(this.init.bind(this), 1000);
+                        return;
+                    }
+
+                    if (this.ws.readyState !== this.ws.OPEN) {
+                        window.requestAnimationFrame(this.loop.bind(this));
+                        return;
+                    }
+
+                    this.t_frame_begin_ms = this.timestamp();
+                    this.requests_regenerate = this.t_frame_begin_ms - this.t_requests_last_update_ms > this.k_requests_update_freq_ms;
+
+                    if (this.requests_regenerate) {
+                        this.requests_old = this.requests;
+                        this.requests = [];
+
+                        try {
+                            this.render();
+                        } catch(err) {
+                            this.output.innerHTML = 'Failed to render state: ' + err;
+                        }
+                    }
+
+                    if (this.requests_regenerate) {
+                        if (this.requests_new_vars) {
+                            this.send_var_to_id_map();
+                            this.requests_new_vars = false;
+                        }
+                        this.send_requests();
+                        this.t_requests_last_update_ms = this.timestamp();
+                    }
+
+                    window.requestAnimationFrame(this.loop.bind(this));
                 },
 
                 get: function(path) {
@@ -106,7 +163,16 @@
                     }
                 },
 
-                receive: function(buf) {
+                onclose: function(evt) {
+                    this.nvars = 0;
+                    this.vars_map = {};
+                    this.var_to_id = {};
+                    this.id_to_var = {};
+                    this.requests_old = null;
+                    this.ws = null;
+                },
+
+                onmessage: function(buf) {
                     var offset = 0;
                     var offset_new = 0;
                     var int_view = new Int32Array(buf.data);
@@ -124,161 +190,71 @@
                 },
             }
 
-            function onOpen(evt)
-            {
-                writeToScreen("CONNECTED", output);
-            }
+            incpp.render = function() {
+                var nClients = this.get_int('nClients');
 
-            function onClose(evt)
-            {
-                writeToScreen("DISCONNECTED", output);
-            }
+                var nCircles = this.get_int('state.nCircles');
+                var dt = this.get_float('state.dt');
+                var energy = this.get_float('state.energy');
 
-            function onMessage(evt)
-            {
-                writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>', output);
-            }
+				this.output.innerHTML = '<br>Clients = ' + nClients;
+				this.output.innerHTML += '<br>nCircles = ' + nCircles;
+				this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
+				this.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
 
-            function onError(evt)
-            {
-                writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data, output);
-            }
+                var show_ids = document.getElementById('show_ids').checked;
+                var show_velocities = document.getElementById('show_velocities').checked;
 
-            function doSend(message)
-            {
-                writeToScreen("SENT: " + message, output);
-                incpp.ws.send(message);
-            }
-
-            function writeToScreen(message, o)
-            {
-                pre = document.createElement("p");
-                pre.style.wordWrap = "break-word";
-                pre.innerHTML = message;
-
-                if (o.childNodes.length > 5) {
-                    o.removeChild(o.childNodes[0]);
-                }
-                o.appendChild(pre);
-            }
-
-            function vr_send() {
-                doSend(document.getElementById("data_to_send").value);
-            }
-
-            function vr_send_binary() {
-                const array = new Float32Array(5);
-
-                for (var i = 0; i < array.length; ++i) {
-                    array[i] = i / 2;
-                }
-                doSend(array);
-            }
-
-            function init() {
-                output = document.getElementById("output");
-                incpp.output = document.getElementById("incppect");
-
-                incpp.ws = new WebSocket(incpp.wsUri);
-                incpp.ws.binaryType = 'arraybuffer';
-                incpp.ws.onopen = function(evt) { onOpen(evt) };
-                incpp.ws.onclose = function(evt) { onClose(evt) };
-                incpp.ws.onmessage = function(evt) {
-                    incpp.receive(evt);
-                };
-                incpp.ws.onerror = function(evt) { onError(evt) };
-
-                incpp.t_start_ms = incpp.timestamp();
-                incpp.t_requests_last_update_ms = incpp.timestamp() - incpp.k_requests_update_freq_ms;;
-
-                window.requestAnimationFrame(loop);
-            }
-
-            function render() {
-                var nClients = incpp.get_int('nClients');
-                var x = incpp.get_int('arr[%d].x', 10);
-
-                var nCircles = incpp.get_int('state.nCircles');
-                var dt = incpp.get_float('state.dt');
-                var energy = incpp.get_float('state.energy');
-
-				incpp.output.innerHTML = '<br>Clients = ' + nClients;
-				incpp.output.innerHTML += '<br>nCircles = ' + nCircles;
-				incpp.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
-				incpp.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
-
-                var canvas = document.getElementById("myCanvas");
+                var canvas = document.getElementById("canvas_circles");
                 var width = canvas.width;
                 var height = canvas.height;
                 var ctx = canvas.getContext("2d");
+
                 ctx.clearRect(0, 0, width, height);
                 for (var i = 0; i < nCircles; ++i) {
-                    var r = incpp.get_float('state.circle[%d].r', i);
-                    var x = incpp.get_float('state.circle[%d].x', i);
-                    var y = incpp.get_float('state.circle[%d].y', i);
-                    var vx = incpp.get_float('state.circle[%d].vx', i);
-                    var vy = incpp.get_float('state.circle[%d].vy', i);
+                    // get c++ data about i'th circle
+                    var r = this.get_float('state.circle[%d].r', i);
+                    var m = this.get_float('state.circle[%d].m', i);
+                    var x = this.get_float('state.circle[%d].x', i);
+                    var y = this.get_float('state.circle[%d].y', i);
+
+                    // canvas coordinates
+                    var cx = 0.5*(1.0 + x)*width;
+                    var cy = 0.5*(1.0 + y)*height;
 
                     ctx.beginPath();
-                    ctx.arc(0.5*(1.0 + x)*width, 0.5*(1.0 + y)*height, 0.5*width*r, 0, 2 * Math.PI);
+
+                    ctx.arc(cx, cy, 0.5*width*r, 0, 2 * Math.PI);
+
+                    if (show_velocities) {
+                        var vx = this.get_float('state.circle[%d].vx', i);
+                        var vy = this.get_float('state.circle[%d].vy', i);
+
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(cx + 0.5*30*vx*m*width, cy + 0.5*30.0*vy*m*height);
+                    }
+
+                    if (show_ids) {
+                        ctx.fillText(i, cx - 4, cy - 0.5*width*r - 2);
+                    }
+
                     ctx.stroke();
                 }
-
-                //incpp.output.innerHTML += '<pre>var_to_id: ' + JSON.stringify(incpp.var_to_id) + '</pre>';
-                //incpp.output.innerHTML += '<pre>requests_old: ' + JSON.stringify(incpp.requests_old) + '</pre>';
-                //incpp.output.innerHTML += '<pre>requests: ' + JSON.stringify(incpp.requests) + '</pre>';
-                //incpp.output.innerHTML += '<br>Start = ' + incpp.t_start_ms;
-                //incpp.output.innerHTML += '<br>Frame begin = ' + incpp.t_frame_begin_ms;
-                //incpp.output.innerHTML += '<br>Clients = ' + nClients;
             }
-
-            function loop() {
-				if (incpp.ws.readyState !== incpp.ws.OPEN) {
-					window.requestAnimationFrame(loop);
-                    return;
-				}
-
-                incpp.t_frame_begin_ms = incpp.timestamp();
-                incpp.requests_regenerate = incpp.t_frame_begin_ms - incpp.t_requests_last_update_ms > incpp.k_requests_update_freq_ms;
-
-                if (incpp.requests_regenerate) {
-                    incpp.requests_old = incpp.requests;
-                    incpp.requests = [];
-
-                    try {
-                        render();
-                    } catch(err) {
-                        incpp.output.innerHTML = 'Failed to render state: ' + err;
-                    }
-                }
-
-                if (incpp.requests_regenerate) {
-                    if (incpp.requests_new_vars) {
-                        console.log("   - New request vars");
-                        incpp.send_var_to_id_map();
-                        incpp.requests_new_vars = false;
-                    }
-                    incpp.send_requests();
-                    incpp.t_requests_last_update_ms = incpp.timestamp();
-                }
-
-                window.requestAnimationFrame(loop);
-            }
-
-            window.requestAnimationFrame(init);
     </script>
 </head>
 
-<body>
-<h2>WebSocket Test</h2>
+<body onLoad="incpp.init()">
 
-<input type="text" id="data_to_send" value="hello"></input>
-<button id="sender" onClick="vr_send()">Send</button>
-<button id="sender_binary" onClick="vr_send_binary()">Send Binary</button>
+<h2>InCppect</h2>
 
 <div id="incppect"></div>
-<canvas id="myCanvas" width="300" height="300" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+<div id="controls">
+    <input type="checkbox" id="show_ids">Show ids</input> <br>
+    <input type="checkbox" id="show_velocities">Show velocities</input> <br>
+    <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incpp.k_requests_update_freq_ms = this.value">Update freq [ms] <br>
+</div>
+<canvas id="canvas_circles" width="500" height="500" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
 
-<div id="output"></div>
 </body>
 </html>

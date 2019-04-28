@@ -44,6 +44,7 @@ struct State {
         InCppect::getInstance().var("state.energy", [this](const auto & idxs) { return InCppect::View(energy); });
 
         InCppect::getInstance().var("state.circle[%d].r", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].r); });
+        InCppect::getInstance().var("state.circle[%d].m", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].m); });
         InCppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].x); });
         InCppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].y); });
         InCppect::getInstance().var("state.circle[%d].vx", [this](const auto & idxs) { return InCppect::View(circles[idxs[0]].vx); });
@@ -73,7 +74,7 @@ struct State {
 
 int main(int argc, char ** argv) {
 	printf("Usage: %s [nCircles]\n", argv[0]);
-    int nCircles = argc > 0 ? atoi(argv[1]) : 256;
+    int nCircles = argc > 1 ? atoi(argv[1]) : 64;
 
     State state;
     state.init(nCircles);
@@ -91,6 +92,13 @@ int main(int argc, char ** argv) {
             if (circle.y - circle.r < -1.0f) circle.vy =  std::abs(circle.vy);
             if (circle.x + circle.r >  1.0f) circle.vx = -std::abs(circle.vx);
             if (circle.y + circle.r >  1.0f) circle.vy = -std::abs(circle.vy);
+
+            if (circle.x < -2.0f || circle.y < -2.0f || circle.x >  2.0f || circle.y >  2.0f) {
+                circle.x = std::max(circle.x, -1.0f);
+                circle.x = std::min(circle.x,  1.0f);
+                circle.y = std::max(circle.y, -1.0f);
+                circle.y = std::min(circle.y,  1.0f);
+            }
 
             energy += circle.m*(circle.vx*circle.vx + circle.vy*circle.vy);
         }
@@ -130,12 +138,14 @@ int main(int argc, char ** argv) {
 
                 float nv0 = c0.vx*nx + c0.vy*ny;
                 float nv1 = c1.vx*nx + c1.vy*ny;
-                float dt = l/(nv0 - nv1);
+                if (std::abs(nv0 - nv1) > 1e-5) {
+                    float dt = l/(nv0 - nv1);
 
-                c0.x += c0.vx*dt;
-                c0.y += c0.vy*dt;
-                c1.x += c1.vx*dt;
-                c1.y += c1.vy*dt;
+                    c0.x += c0.vx*dt;
+                    c0.y += c0.vy*dt;
+                    c1.x += c1.vx*dt;
+                    c1.y += c1.vy*dt;
+                }
             }
         }
 

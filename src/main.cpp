@@ -34,7 +34,7 @@ struct State {
     State() {
         InCppect::getInstance().var("state.dt", [this](const auto & idxs) { return InCppect::View(dt); });
 
-        InCppect::getInstance().var("state.nCircles", [this](const auto & idxs) {
+        InCppect::getInstance().var("state.ncircles", [this](const auto & idxs) {
             static int n = 0;
             n = circles.size();
             return InCppect::View(n);

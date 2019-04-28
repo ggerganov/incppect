@@ -73,7 +73,7 @@ struct InCppect::Impl {
                     std::cout << "[+] Client with Id = " << sd->clientId  << " connected\n";
                 },
                 .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                    //std::cout << "Received message size = " << message.size() << std::endl;
+                    rxTotal_bytes += message.size();
                     if (message.size() < sizeof(int)) {
                         return;
                     }
@@ -216,11 +216,15 @@ struct InCppect::Impl {
             }
             if (buffer.size() > 0) {
                 socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY);
+                txTotal_bytes += buffer.size();
             }
         }
     }
 
     int port = 3000;
+
+    int32_t txTotal_bytes = 0;
+    int32_t rxTotal_bytes = 0;
 
     std::map<TPath, int> pathToGetter;
     std::vector<TGetter> getters;
@@ -230,7 +234,21 @@ struct InCppect::Impl {
     std::map<int, ClientData> clientData;
 };
 
-InCppect::InCppect() : m_impl(new Impl()) {}
+InCppect::InCppect() : m_impl(new Impl()) {
+    var("incppect.nclients", [this](const TIdxs & idxs) {
+        static int n = 0;
+        n = m_impl->socketData.size();
+        return std::string_view((char *)&n, sizeof(n));
+    });
+
+    var("incppect.tx_total", [this](const TIdxs & idxs) {
+        return std::string_view((char *)&m_impl->txTotal_bytes, sizeof(m_impl->txTotal_bytes));
+    });
+
+    var("incppect.rx_total", [this](const TIdxs & idxs) {
+        return std::string_view((char *)&m_impl->rxTotal_bytes, sizeof(m_impl->rxTotal_bytes));
+    });
+}
 
 InCppect::~InCppect() {}
 
@@ -241,12 +259,6 @@ bool InCppect::init(int port) {
 }
 
 void InCppect::run() {
-    var("nClients", [this](const TIdxs & idxs) {
-        static int n = 0;
-        n = m_impl->socketData.size();
-        return std::string_view((char *)&n, sizeof(n));
-    });
-
     m_impl->run();
 }
 

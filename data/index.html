@@ -27,6 +27,7 @@
                 k_var_delim: ' ',
                 k_requests_update_freq_ms: 50,
 
+                src_render: null,
                 output: null,
 
                 timestamp: function() {
@@ -49,6 +50,16 @@
 
                     this.t_start_ms = this.timestamp();
                     this.t_requests_last_update_ms = this.timestamp() - this.k_requests_update_freq_ms;
+
+                    this.src_render = this.render.toString().match(/function[^{]+\{([\s\S]*)\}$/)[1];
+                    document.getElementById('src_render').value = this.src_render;
+
+                    var this_ref = this;
+                    document.getElementById('src_render').addEventListener('keydown', function (e){
+                        if ((e.ctrlKey || e.metaKey) && (e.keyCode == 13 || e.keyCode == 10)) {
+                            this_ref.render = new Function(this.value);
+                        }
+                    }, false);
 
                     window.requestAnimationFrame(this.loop.bind(this));
                 },
@@ -191,9 +202,11 @@
             }
 
             incppect.render = function() {
-                var nClients = this.get_int('nClients');
+                var nclients = this.get_int('incppect.nclients');
+                var tx_total = this.get_int('incppect.tx_total');
+                var rx_total = this.get_int('incppect.rx_total');
 
-                var nCircles = this.get_int('state.nCircles');
+                var ncircles = this.get_int('state.ncircles');
                 var dt = this.get_float('state.dt');
                 var energy = this.get_float('state.energy');
 
@@ -205,13 +218,16 @@
                 var height = canvas.height;
                 var ctx = canvas.getContext("2d");
 
-				this.output.innerHTML = '<br>Clients = ' + nClients;
-				this.output.innerHTML += '<br>nCircles = ' + nCircles;
-				this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
-				this.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
+                this.output.innerHTML = 'nclients = ' + nclients;
+                this.output.innerHTML += '<br>tx total = ' + tx_total + ' bytes';
+                this.output.innerHTML += '<br>rx total = ' + rx_total + ' bytes';
+                this.output.innerHTML += '<br>';
+                this.output.innerHTML += '<br>ncircles = ' + ncircles;
+                this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
+                this.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
 
                 ctx.clearRect(0, 0, width, height);
-                for (var i = 0; i < nCircles; ++i) {
+                for (var i = 0; i < ncircles; ++i) {
                     // get c++ data about i'th circle
                     var r = this.get_float('state.circle[%d].r', i);
                     var m = this.get_float('state.circle[%d].m', i);
@@ -246,7 +262,7 @@
 
 <body onLoad="incppect.init()">
 
-<h2>InCppect</h2>
+<h3>InCppect</h3>
 
 <div id="incppect"></div>
 <div id="controls">
@@ -254,7 +270,8 @@
     <input type="checkbox" id="show_velocities">Show velocities</input> <br>
     <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms] <br>
 </div>
-<canvas id="canvas_circles" width="500" height="500" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+<canvas id="canvas_circles" width="256" height="256" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+<textarea rows=20 cols=120 id="src_render"></textarea>
 
 </body>
 </html>

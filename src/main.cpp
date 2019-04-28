@@ -84,6 +84,7 @@ int main(int argc, char ** argv) {
 
     while (true) {
         float energy = 0.0;
+
         for (auto & circle : state.circles) {
             circle.x += circle.vx*state.dt;
             circle.y += circle.vy*state.dt;

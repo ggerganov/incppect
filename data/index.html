@@ -1,7 +1,7 @@
 <html>
     <head>
         <script language="javascript" type="text/javascript">
-            var incpp = {
+            var incppect = {
                 // websocket data
                 ws: null,
                 ws_uri: 'ws://' + window.location.hostname + ':' + window.location.port + '/incppect',
@@ -190,17 +190,12 @@
                 },
             }
 
-            incpp.render = function() {
+            incppect.render = function() {
                 var nClients = this.get_int('nClients');
 
                 var nCircles = this.get_int('state.nCircles');
                 var dt = this.get_float('state.dt');
                 var energy = this.get_float('state.energy');
-
-				this.output.innerHTML = '<br>Clients = ' + nClients;
-				this.output.innerHTML += '<br>nCircles = ' + nCircles;
-				this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
-				this.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
 
                 var show_ids = document.getElementById('show_ids').checked;
                 var show_velocities = document.getElementById('show_velocities').checked;
@@ -209,6 +204,11 @@
                 var width = canvas.width;
                 var height = canvas.height;
                 var ctx = canvas.getContext("2d");
+
+				this.output.innerHTML = '<br>Clients = ' + nClients;
+				this.output.innerHTML += '<br>nCircles = ' + nCircles;
+				this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
+				this.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
 
                 ctx.clearRect(0, 0, width, height);
                 for (var i = 0; i < nCircles; ++i) {
@@ -226,6 +226,10 @@
 
                     ctx.arc(cx, cy, 0.5*width*r, 0, 2 * Math.PI);
 
+                    if (show_ids) {
+                        ctx.fillText(i, cx - 4, cy - 0.5*width*r - 2);
+                    }
+
                     if (show_velocities) {
                         var vx = this.get_float('state.circle[%d].vx', i);
                         var vy = this.get_float('state.circle[%d].vy', i);
@@ -234,17 +238,13 @@
                         ctx.lineTo(cx + 0.5*30*vx*m*width, cy + 0.5*30.0*vy*m*height);
                     }
 
-                    if (show_ids) {
-                        ctx.fillText(i, cx - 4, cy - 0.5*width*r - 2);
-                    }
-
                     ctx.stroke();
                 }
             }
     </script>
 </head>
 
-<body onLoad="incpp.init()">
+<body onLoad="incppect.init()">
 
 <h2>InCppect</h2>
 
@@ -252,7 +252,7 @@
 <div id="controls">
     <input type="checkbox" id="show_ids">Show ids</input> <br>
     <input type="checkbox" id="show_velocities">Show velocities</input> <br>
-    <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incpp.k_requests_update_freq_ms = this.value">Update freq [ms] <br>
+    <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms] <br>
 </div>
 <canvas id="canvas_circles" width="500" height="500" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
 

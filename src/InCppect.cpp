@@ -265,7 +265,7 @@ InCppect::InCppect() : m_impl(new Impl()) {
     });
 
     var("incppect.ip_address[%d]", [this](const TIdxs & idxs) {
-        auto it = m_impl->clientData.begin();
+        auto it = m_impl->clientData.cbegin();
         std::advance(it, idxs[0]);
         return std::string_view((char *)it->second.ipAddress, sizeof(it->second.ipAddress));
     });

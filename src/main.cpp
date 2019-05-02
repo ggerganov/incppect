@@ -88,7 +88,7 @@ struct State {
             energy += circle.m*(circle.vx*circle.vx + circle.vy*circle.vy);
         }
 
-        energy = energy;
+        this->energy = energy;
 
         for (int i = 0; i < circles.size(); ++i) {
             auto & c0 = circles[i];

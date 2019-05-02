@@ -61,11 +61,6 @@ struct InCppect::Impl {
             .compression = uWS::SHARED_COMPRESSOR,
                 .maxPayloadLength = 256*1024,
                 .open = [&](auto *ws, auto *req) {
-                    std::cout << "XXXXXX: " << ws->getRemoteAddress().size() << std::endl;
-                    for (int i = 0; i < ws->getRemoteAddress().size(); ++i) {
-                        printf("%d - %d\n", i, ws->getRemoteAddress()[i]);
-                    }
-
                     static int uniqueId = 1;
                     ++uniqueId;
 

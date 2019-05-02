@@ -101,7 +101,7 @@
                     window.requestAnimationFrame(this.loop.bind(this));
                 },
 
-                get: function(path) {
+                get: function(path, ...args) {
                     for (var i = 1; i < arguments.length; i++) {
                         path = path.replace('%d', arguments[i]);
                     }
@@ -122,19 +122,40 @@
                     return this.vars_map[path];
                 },
 
-                get_int: function(path) {
-                    var abuf = this.get.apply(this, arguments);
-                    return new Int32Array(abuf)[0];
+                get_int8: function(path, ...args) {
+                    return this.get_int16_arr(path, ...args)[0];
                 },
 
-                get_int_arr: function(path) {
-                    var abuf = this.get.apply(this, arguments);
+                get_int8_arr: function(path, ...args) {
+                    var abuf = this.get(path, ...args);
+                    return new Int8Array(abuf);
+                },
+
+                get_int16: function(path, ...args) {
+                    return this.get_int16_arr(path, ...args)[0];
+                },
+
+                get_int16_arr: function(path, ...args) {
+                    var abuf = this.get(path, ...args);
+                    return new Int16Array(abuf);
+                },
+
+                get_int32: function(path, ...args) {
+                    return this.get_int32_arr(path, ...args)[0];
+                },
+
+                get_int32_arr: function(path, ...args) {
+                    var abuf = this.get(path, ...args);
                     return new Int32Array(abuf);
                 },
 
-                get_float: function(path) {
-                    var abuf = this.get.apply(this, arguments);
-                    return new Float32Array(abuf)[0];
+                get_float: function(path, ...args) {
+                    return this.get_float_arr(path, ...args)[0];
+                },
+
+                get_float_arr: function(path, ...args) {
+                    var abuf = this.get(path, ...args);
+                    return new Float32Array(abuf);
                 },
 
                 send_var_to_id_map: function() {
@@ -209,13 +230,13 @@
                 },
 
                 render_default: function() {
-                    var nclients = this.get_int('incppect.nclients');
-                    var tx_total = this.get_int('incppect.tx_total');
-                    var rx_total = this.get_int('incppect.rx_total');
+                    var nclients = this.get_int32('incppect.nclients');
+                    var tx_total = this.get_int32('incppect.tx_total');
+                    var rx_total = this.get_int32('incppect.rx_total');
 
                     this.output.innerHTML = 'nclients = ' + nclients;
                     for (var i = 0; i < nclients; ++i) {
-                        var ipaddress_bytes = this.get_int('incppect.ip_address[%d]', i);
+                        var ipaddress_bytes = this.get_int32('incppect.ip_address[%d]', i);
                         function int_to_ip(int) {
                             var part1 = int & 255;
                             var part2 = ((int >> 8) & 255);
@@ -233,7 +254,7 @@
             }
 
             incppect.render = function() {
-                var ncircles = this.get_int('state.ncircles');
+                var ncircles = this.get_int32('state.ncircles');
                 var dt = this.get_float('state.dt');
                 var energy = this.get_float('state.energy');
 

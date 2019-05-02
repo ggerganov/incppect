@@ -5,3 +5,4 @@
 
 #pragma once
 
+constexpr auto kInCppect_js = R"js()js";

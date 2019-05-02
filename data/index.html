@@ -127,6 +127,11 @@
                     return new Int32Array(abuf)[0];
                 },
 
+                get_int_arr: function(path) {
+                    var abuf = this.get.apply(this, arguments);
+                    return new Int32Array(abuf);
+                },
+
                 get_float: function(path) {
                     var abuf = this.get.apply(this, arguments);
                     return new Float32Array(abuf)[0];
@@ -219,8 +224,20 @@
                 var ctx = canvas.getContext("2d");
 
                 this.output.innerHTML = 'nclients = ' + nclients;
-                this.output.innerHTML += '<br>tx total = ' + tx_total + ' bytes';
-                this.output.innerHTML += '<br>rx total = ' + rx_total + ' bytes';
+                for (var i = 0; i < nclients; ++i) {
+                    var ipaddress_bytes = this.get_int('incppect.ip_address[%d]', i);
+                    function int_to_ip(int) {
+                        var part1 = int & 255;
+                        var part2 = ((int >> 8) & 255);
+                        var part3 = ((int >> 16) & 255);
+                        var part4 = ((int >> 24) & 255);
+
+                        return part1 + "." + part2 + "." + part3 + "." + part4;
+                    }
+                    this.output.innerHTML += '<br>client ' + i + ' : ' + int_to_ip(ipaddress_bytes);
+                }
+                this.output.innerHTML += '<br>tx total = ' + (tx_total/1024.0/1024.0).toFixed(4) + ' MB';
+                this.output.innerHTML += '<br>rx total = ' + (rx_total/1024.0/1024.0).toFixed(4) + ' MB';
                 this.output.innerHTML += '<br>';
                 this.output.innerHTML += '<br>ncircles = ' + ncircles;
                 this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
@@ -228,7 +245,7 @@
 
                 ctx.clearRect(0, 0, width, height);
                 for (var i = 0; i < ncircles; ++i) {
-                    // get c++ data about i'th circle
+                    // get c++ data for i'th circle
                     var r = this.get_float('state.circle[%d].r', i);
                     var m = this.get_float('state.circle[%d].m', i);
                     var x = this.get_float('state.circle[%d].x', i);
@@ -240,7 +257,7 @@
 
                     ctx.beginPath();
 
-                    ctx.arc(cx, cy, 0.5*width*r, 0, 2 * Math.PI);
+                    ctx.arc(cx, cy, 0.5*width*r, 0, 2.0*Math.PI);
 
                     if (show_ids) {
                         ctx.fillText(i, cx - 4, cy - 0.5*width*r - 2);
@@ -270,7 +287,7 @@
     <input type="checkbox" id="show_velocities">Show velocities</input> <br>
     <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms] <br>
 </div>
-<canvas id="canvas_circles" width="256" height="256" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+<canvas id="canvas_circles" width="256px" height="256px" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
 <textarea rows=20 cols=120 id="src_render"></textarea>
 
 </body>

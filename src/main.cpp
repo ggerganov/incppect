@@ -66,28 +66,12 @@ struct State {
         }
     }
 
-    float dt = 0.001f;
-    float energy = 0.0f;
-
-    std::vector<Circle> circles;
-};
-
-int main(int argc, char ** argv) {
-	printf("Usage: %s [nCircles]\n", argv[0]);
-    int nCircles = argc > 1 ? atoi(argv[1]) : 64;
-
-    State state;
-    state.init(nCircles);
-
-    InCppect::getInstance().init(3000);
-    InCppect::getInstance().runAsync().detach();
-
-    while (true) {
+    void update() {
         float energy = 0.0;
 
-        for (auto & circle : state.circles) {
-            circle.x += circle.vx*state.dt;
-            circle.y += circle.vy*state.dt;
+        for (auto & circle : circles) {
+            circle.x += circle.vx*dt;
+            circle.y += circle.vy*dt;
 
             if (circle.x - circle.r < -1.0f) circle.vx =  std::abs(circle.vx);
             if (circle.y - circle.r < -1.0f) circle.vy =  std::abs(circle.vy);
@@ -104,12 +88,12 @@ int main(int argc, char ** argv) {
             energy += circle.m*(circle.vx*circle.vx + circle.vy*circle.vy);
         }
 
-        state.energy = energy;
+        energy = energy;
 
-        for (int i = 0; i < state.circles.size(); ++i) {
-            auto & c0 = state.circles[i];
-            for (int j = i + 1; j < state.circles.size(); ++j) {
-                auto & c1 = state.circles[j];
+        for (int i = 0; i < circles.size(); ++i) {
+            auto & c0 = circles[i];
+            for (int j = i + 1; j < circles.size(); ++j) {
+                auto & c1 = circles[j];
 
                 float d2 = ::dist2(c0, c1);
                 if (d2 > ::dist2(c0.r, c1.r)) continue;
@@ -149,6 +133,26 @@ int main(int argc, char ** argv) {
                 }
             }
         }
+    }
+
+    float dt = 0.001f;
+    float energy = 0.0f;
+
+    std::vector<Circle> circles;
+};
+
+int main(int argc, char ** argv) {
+	printf("Usage: %s [nCircles]\n", argv[0]);
+    int nCircles = argc > 1 ? atoi(argv[1]) : 64;
+
+    State state;
+    state.init(nCircles);
+
+    InCppect::getInstance().init(3000);
+    InCppect::getInstance().runAsync().detach();
+
+    while (true) {
+        state.update();
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

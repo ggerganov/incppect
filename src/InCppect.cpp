@@ -37,6 +37,8 @@ struct InCppect::Impl {
     struct ClientData {
         int64_t tConnected_ms = -1;
 
+        uint8_t ipAddress[4];
+
         std::vector<int> lastRequests;
         std::map<int, Request> requests;
     };
@@ -59,15 +61,28 @@ struct InCppect::Impl {
             .compression = uWS::SHARED_COMPRESSOR,
                 .maxPayloadLength = 256*1024,
                 .open = [&](auto *ws, auto *req) {
+                    std::cout << "XXXXXX: " << ws->getRemoteAddress().size() << std::endl;
+                    for (int i = 0; i < ws->getRemoteAddress().size(); ++i) {
+                        printf("%d - %d\n", i, ws->getRemoteAddress()[i]);
+                    }
+
                     static int uniqueId = 1;
                     ++uniqueId;
 
-                    clientData[uniqueId].tConnected_ms = ::timestamp();
+                    auto & cd = clientData[uniqueId];
+                    cd.tConnected_ms = ::timestamp();
+
+                    auto addressBytes = ws->getRemoteAddress();
+                    cd.ipAddress[0] = addressBytes[12];
+                    cd.ipAddress[1] = addressBytes[13];
+                    cd.ipAddress[2] = addressBytes[14];
+                    cd.ipAddress[3] = addressBytes[15];
 
                     auto sd = (PerSocketData *) ws->getUserData();
                     sd->clientId = uniqueId;
                     sd->ws = ws;
                     sd->mainLoop = uWS::Loop::get();
+
                     socketData.insert({ uniqueId, sd });
 
                     std::cout << "[+] Client with Id = " << sd->clientId  << " connected\n";
@@ -247,6 +262,12 @@ InCppect::InCppect() : m_impl(new Impl()) {
 
     var("incppect.rx_total", [this](const TIdxs & idxs) {
         return std::string_view((char *)&m_impl->rxTotal_bytes, sizeof(m_impl->rxTotal_bytes));
+    });
+
+    var("incppect.ip_address[%d]", [this](const TIdxs & idxs) {
+        auto it = m_impl->clientData.begin();
+        std::advance(it, idxs[0]);
+        return std::string_view((char *)it->second.ipAddress, sizeof(it->second.ipAddress));
     });
 }
 

@@ -1,2 +1,4 @@
-add_executable(test0 main.cpp InCppect.cpp)
-target_link_libraries(test0 PRIVATE uWS)
+add_library(incppect SHARED incppect.cpp)
+target_include_directories(incppect PUBLIC ../include)
+target_include_directories(incppect PRIVATE .)
+target_link_libraries(incppect PRIVATE uWS)

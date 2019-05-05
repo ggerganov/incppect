@@ -1,4 +1,4 @@
-/*! \file InCppect.h
+/*! \file incppect.h
  *  \brief Enter description here.
  *  \author Georgi Gerganov
  */
@@ -11,14 +11,14 @@
 #include <string_view>
 #include <thread>
 
-class InCppect {
+class Incppect {
     public:
         using TPath = std::string;
         using TIdxs = std::vector<int>;
         using TGetter = std::function<std::string_view(const TIdxs & idxs)>;
 
-        InCppect();
-        ~InCppect();
+        Incppect();
+        ~Incppect();
 
         bool init(int port);
         void run();
@@ -31,8 +31,8 @@ class InCppect {
                 return std::string_view { (char *)(&v), sizeof(v) };
             }
 
-        static InCppect & getInstance() {
-            static InCppect instance;
+        static Incppect & getInstance() {
+            static Incppect instance;
             return instance;
         }
 

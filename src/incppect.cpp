@@ -1,9 +1,9 @@
-/*! \file InCppect.cpp
+/*! \file incppect.cpp
  *  \brief Enter description here.
  *  \author Georgi Gerganov
  */
 
-#include "InCppect.h"
+#include "incppect/incppect.h"
 
 #include "App.h" // uWebSockets
 
@@ -20,7 +20,7 @@ namespace {
     }
 }
 
-struct InCppect::Impl {
+struct Incppect::Impl {
     struct Request {
         int64_t tLastUpdated_ms = -1;
         int64_t tLastRequested_ms = -1;
@@ -244,7 +244,7 @@ struct InCppect::Impl {
     std::map<int, ClientData> clientData;
 };
 
-InCppect::InCppect() : m_impl(new Impl()) {
+Incppect::Incppect() : m_impl(new Impl()) {
     var("incppect.nclients", [this](const TIdxs & idxs) {
         static int n = 0;
         n = m_impl->socketData.size();
@@ -266,24 +266,24 @@ InCppect::InCppect() : m_impl(new Impl()) {
     });
 }
 
-InCppect::~InCppect() {}
+Incppect::~Incppect() {}
 
-bool InCppect::init(int port) {
+bool Incppect::init(int port) {
     m_impl->port = port;
 
     return m_impl->init();
 }
 
-void InCppect::run() {
+void Incppect::run() {
     m_impl->run();
 }
 
-std::thread InCppect::runAsync() {
+std::thread Incppect::runAsync() {
     std::thread worker([this](){ this->run(); });
     return worker;
 }
 
-bool InCppect::var(const TPath & path, TGetter && getter) {
+bool Incppect::var(const TPath & path, TGetter && getter) {
     m_impl->pathToGetter[path] = m_impl->getters.size();
     m_impl->getters.emplace_back(std::move(getter));
 

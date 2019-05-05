@@ -32,23 +32,23 @@ float dist2(const Circle & c0, const Circle & c1) {
 
 struct State {
     State() {
-        Incppect::getInstance().var("state.dt", [this](const auto & idxs) { return Incppect::View(dt); });
+        Incppect::getInstance().var("state.dt", [this](const auto & idxs) { return Incppect::view(dt); });
 
         Incppect::getInstance().var("state.ncircles", [this](const auto & idxs) {
             static int n = 0;
             n = circles.size();
-            return Incppect::View(n);
+            return Incppect::view(n);
         });
 
-        Incppect::getInstance().var("state.dt", [this](const auto & idxs) { return Incppect::View(dt); });
-        Incppect::getInstance().var("state.energy", [this](const auto & idxs) { return Incppect::View(energy); });
+        Incppect::getInstance().var("state.dt", [this](const auto & idxs) { return Incppect::view(dt); });
+        Incppect::getInstance().var("state.energy", [this](const auto & idxs) { return Incppect::view(energy); });
 
-        Incppect::getInstance().var("state.circle[%d].r", [this](const auto & idxs) { return Incppect::View(circles[idxs[0]].r); });
-        Incppect::getInstance().var("state.circle[%d].m", [this](const auto & idxs) { return Incppect::View(circles[idxs[0]].m); });
-        Incppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return Incppect::View(circles[idxs[0]].x); });
-        Incppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return Incppect::View(circles[idxs[0]].y); });
-        Incppect::getInstance().var("state.circle[%d].vx", [this](const auto & idxs) { return Incppect::View(circles[idxs[0]].vx); });
-        Incppect::getInstance().var("state.circle[%d].vy", [this](const auto & idxs) { return Incppect::View(circles[idxs[0]].vy); });
+        Incppect::getInstance().var("state.circle[%d].r", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].r); });
+        Incppect::getInstance().var("state.circle[%d].m", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].m); });
+        Incppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].x); });
+        Incppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].y); });
+        Incppect::getInstance().var("state.circle[%d].vx", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].vx); });
+        Incppect::getInstance().var("state.circle[%d].vy", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].vy); });
     }
 
     void init(int nCircles) {
@@ -142,14 +142,19 @@ struct State {
 };
 
 int main(int argc, char ** argv) {
-	printf("Usage: %s [nCircles]\n", argv[0]);
-    int nCircles = argc > 1 ? atoi(argv[1]) : 64;
+	printf("Usage: %s [port] [httpRoot] [nCircles]\n", argv[0]);
+
+    int port = argc > 1 ? atoi(argv[1]) : 3000;
+    std::string httpRoot = argc > 2 ? argv[2] : ".";
+    int nCircles = argc > 3 ? atoi(argv[3]) : 64;
 
     State state;
     state.init(nCircles);
 
-    Incppect::getInstance().init(3000);
-    Incppect::getInstance().runAsync().detach();
+    Incppect::getInstance().runAsync({
+        .portListen = port,
+        .httpRoot = httpRoot,
+    }).detach();
 
     while (true) {
         state.update();

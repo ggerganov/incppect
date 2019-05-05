@@ -5,14 +5,22 @@
 
 #include "incppect/incppect.h"
 
+#include "common.h"
+
 #include "App.h" // uWebSockets
 
-#include <map>
-#include <string>
-#include <fstream>
-#include <chrono>
-#include <sstream>
 #include <algorithm>
+#include <chrono>
+#include <fstream>
+#include <map>
+#include <sstream>
+#include <string>
+
+#ifdef INCPPECT_DEBUG
+#define my_printf printf
+#else
+#define my_printf(...)
+#endif
 
 namespace {
     inline int64_t timestamp() {
@@ -21,6 +29,8 @@ namespace {
 }
 
 struct Incppect::Impl {
+    using IpAddress = uint8_t[4];
+
     struct Request {
         int64_t tLastUpdated_ms = -1;
         int64_t tLastRequested_ms = -1;
@@ -37,7 +47,7 @@ struct Incppect::Impl {
     struct ClientData {
         int64_t tConnected_ms = -1;
 
-        uint8_t ipAddress[4];
+        IpAddress ipAddress;
 
         std::vector<int> lastRequests;
         std::map<int, Request> requests;
@@ -50,16 +60,12 @@ struct Incppect::Impl {
         uWS::WebSocket<false, true> * ws = nullptr;
     };
 
-    bool init() {
-        return true;
-    }
-
     void run() {
         mainLoop = uWS::Loop::get();
 
-        uWS::App().ws<PerSocketData>("/incppect", {
+        uWS::App().ws<PerSocketData>(parameters.patternWS, {
             .compression = uWS::SHARED_COMPRESSOR,
-                .maxPayloadLength = 256*1024,
+                .maxPayloadLength = parameters.maxPayloadLength_bytes,
                 .open = [&](auto *ws, auto *req) {
                     static int uniqueId = 1;
                     ++uniqueId;
@@ -80,7 +86,7 @@ struct Incppect::Impl {
 
                     socketData.insert({ uniqueId, sd });
 
-                    std::cout << "[+] Client with Id = " << sd->clientId  << " connected\n";
+                    my_printf("[incppect] client with id = %d connectd\n", sd->clientId);
                 },
                 .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
                     rxTotal_bytes += message.size();
@@ -97,7 +103,6 @@ struct Incppect::Impl {
                     switch (type) {
                         case 1:
                             {
-                                std::cout << "var_to_id: " << message.data() + 4 << std::endl;
                                 std::stringstream ss(message.data() + 4);
                                 while (true) {
                                     Request request;
@@ -116,12 +121,12 @@ struct Incppect::Impl {
                                     }
 
                                     if (pathToGetter.find(path) != pathToGetter.end()) {
-                                        printf("requestId = %d, path = '%s', nidxs = %d\n", requestId, path.c_str(), nidxs);
+                                        my_printf("[incppect] requestId = %d, path = '%s', nidxs = %d\n", requestId, path.c_str(), nidxs);
                                         request.getterId = pathToGetter[path];
 
                                         cd.requests[requestId] = std::move(request);
                                     } else {
-                                        printf("Missing path '%s'\n", path.c_str());
+                                        my_printf("[incppect] missing path '%s'\n", path.c_str());
                                     }
                                 }
                             }
@@ -129,7 +134,7 @@ struct Incppect::Impl {
                         case 2:
                             {
                                 int nRequests = (message.size() - sizeof(int))/sizeof(int);
-                                std::cout << "Received requests: " << nRequests << std::endl;
+                                my_printf("[incppect] received requests: %d\n", nRequests);
 
                                 cd.lastRequests.clear();
                                 for (int i = 0; i < nRequests; ++i) {
@@ -151,14 +156,14 @@ struct Incppect::Impl {
                             }
                             break;
                         default:
-                            std::cout << "Unknown message type = " << type << std::endl;
+                            my_printf("[incppect] unknown message type: %d\n", type);
                     };
                     sd->mainLoop->defer([this]() { this->update(); });
                 },
                 .drain = [](auto *ws) {
                     /* Check getBufferedAmount here */
                     if (ws->getBufferedAmount() > 0) {
-                        std::cout << "  [drain] Buffered amount = " << ws->getBufferedAmount() << std::endl;
+                        my_printf("[incppect] drain: buffered amount = %d\n", ws->getBufferedAmount());
                     }
                 },
                 .ping = [](auto *ws) {
@@ -169,19 +174,44 @@ struct Incppect::Impl {
                 },
                 .close = [&](auto *ws, int code, std::string_view message) {
                     auto sd = (PerSocketData *) ws->getUserData();
-                    std::cout << "[+] Client with Id = " << sd->clientId  << " disconnected\n";
+                    my_printf("[incppect] client with id = %d disconnected\n", sd->clientId);
 
                     clientData.erase(sd->clientId);
                     socketData.erase(sd->clientId);
                 }
-        }).get("/*", [](auto *res, auto *req) {
-            std::ifstream t("../data/index.html");
-            std::string str((std::istreambuf_iterator<char>(t)),
+        }).get("/incppect.js", [this](auto *res, auto *req) {
+            res->end(kInCppect_js);
+        }).get("/*", [this](auto *res, auto *req) {
+            std::string url = std::string(req->getUrl());
+
+            if (url.size() == 0) {
+                res->end("Resource not found");
+                return;
+            }
+
+            if (url[url.size() - 1] == '/') {
+                url += "index.html";
+            }
+
+            std::ifstream fin(parameters.httpRoot + url);
+
+            if (fin.is_open() == false || fin.good() == false) {
+                res->end("Resource not found");
+                return;
+            }
+
+            std::string str((std::istreambuf_iterator<char>(fin)),
                             std::istreambuf_iterator<char>());
+
+            if (str.size() == 0) {
+                res->end("Resource not found");
+                return;
+            }
+
             res->end(str);
-        }).listen(port, [this](auto *token) {
+        }).listen(parameters.portListen, [this](auto *token) {
             if (token) {
-                std::cout << "Listening on port " << port << std::endl;
+                my_printf("[incppect] listening on port %d\n", parameters.portListen);
             }
         }).run();
     }
@@ -222,7 +252,7 @@ struct Incppect::Impl {
                 }
             }
             if (socketData[clientId]->ws->getBufferedAmount()) {
-                std::cout << "  [update] Buffered amount = " << socketData[clientId]->ws->getBufferedAmount() << std::endl;
+                my_printf("[incppect] update: buffered amount = %d\n", socketData[clientId]->ws->getBufferedAmount());
             }
             if (buffer.size() > 0) {
                 socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY);
@@ -231,7 +261,7 @@ struct Incppect::Impl {
         }
     }
 
-    int port = 3000;
+    Parameters parameters;
 
     int32_t txTotal_bytes = 0;
     int32_t rxTotal_bytes = 0;
@@ -248,38 +278,28 @@ Incppect::Incppect() : m_impl(new Impl()) {
     var("incppect.nclients", [this](const TIdxs & idxs) {
         static int n = 0;
         n = m_impl->socketData.size();
-        return std::string_view((char *)&n, sizeof(n));
+        return view(n);
     });
 
-    var("incppect.tx_total", [this](const TIdxs & idxs) {
-        return std::string_view((char *)&m_impl->txTotal_bytes, sizeof(m_impl->txTotal_bytes));
-    });
-
-    var("incppect.rx_total", [this](const TIdxs & idxs) {
-        return std::string_view((char *)&m_impl->rxTotal_bytes, sizeof(m_impl->rxTotal_bytes));
-    });
+    var("incppect.tx_total", [this](const TIdxs & idxs) { return view(m_impl->txTotal_bytes); });
+    var("incppect.rx_total", [this](const TIdxs & idxs) { return view(m_impl->rxTotal_bytes); });
 
     var("incppect.ip_address[%d]", [this](const TIdxs & idxs) {
         auto it = m_impl->clientData.cbegin();
         std::advance(it, idxs[0]);
-        return std::string_view((char *)it->second.ipAddress, sizeof(it->second.ipAddress));
+        return view(it->second.ipAddress);
     });
 }
 
 Incppect::~Incppect() {}
 
-bool Incppect::init(int port) {
-    m_impl->port = port;
-
-    return m_impl->init();
-}
-
-void Incppect::run() {
+void Incppect::run(Parameters parameters) {
+    m_impl->parameters = parameters;
     m_impl->run();
 }
 
-std::thread Incppect::runAsync() {
-    std::thread worker([this](){ this->run(); });
+std::thread Incppect::runAsync(Parameters parameters) {
+    std::thread worker([this, parameters]() { this->run(parameters); });
     return worker;
 }
 

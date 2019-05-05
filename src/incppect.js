@@ -1,12 +1,3 @@
-/*! \file common.h
- *  \brief Enter description here.
- *  \author Georgi Gerganov
- */
-
-#pragma once
-
-constexpr auto kInCppect_js = R"js(
-
     var incppect = {
         // websocket data
         ws: null,
@@ -258,6 +249,3 @@ constexpr auto kInCppect_js = R"js(
             this.output.innerHTML += '<br>';
         },
     }
-
-
-)js";

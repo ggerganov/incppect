@@ -34,6 +34,7 @@ else ()
         uSockets/src/loop.c
         uSockets/src/socket.c
         uSockets/src/ssl.c
+        uSockets/src/eventing/epoll.c
         )
 
     target_include_directories(uWS PRIVATE
@@ -50,6 +51,7 @@ else ()
 
     target_link_libraries(uWS PUBLIC
         ${ZLIB_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
         )
 
     target_compile_definitions(uWS PRIVATE LIBUS_NO_SSL=1)

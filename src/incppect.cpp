@@ -63,9 +63,11 @@ struct Incppect::Impl {
     void run() {
         mainLoop = uWS::Loop::get();
 
-        uWS::App().ws<PerSocketData>(parameters.patternWS, {
+        uWS::App().ws<PerSocketData>(parameters.patternWS,
+                uWS::TemplatedApp<false>::WebSocketBehavior {
             .compression = uWS::SHARED_COMPRESSOR,
                 .maxPayloadLength = parameters.maxPayloadLength_bytes,
+                .idleTimeout = 120,
                 .open = [&](auto *ws, auto *req) {
                     static int uniqueId = 1;
                     ++uniqueId;

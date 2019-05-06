@@ -153,9 +153,11 @@ int main(int argc, char ** argv) {
     State state;
     state.init(nCircles);
 
-    Incppect::getInstance().runAsync({
+    Incppect::getInstance().runAsync(Incppect::Parameters {
         .portListen = port,
-        .httpRoot = httpRoot,
+            .maxPayloadLength_bytes = 256*1024,
+            .patternWS = "/incppect",
+            .httpRoot = httpRoot,
     }).detach();
 
     while (true) {

@@ -180,7 +180,7 @@ struct Incppect::Impl {
                     socketData.erase(sd->clientId);
                 }
         }).get("/incppect.js", [this](auto *res, auto *req) {
-            res->end(kInCppect_js);
+            res->end(kIncppect_js);
         }).get("/*", [this](auto *res, auto *req) {
             std::string url = std::string(req->getUrl());
 

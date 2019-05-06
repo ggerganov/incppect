@@ -1,11 +1,12 @@
 /*! \file common.h
- *  \brief Enter description here.
+ *  \brief Auto-generated file. Do not modify.
  *  \author Georgi Gerganov
  */
 
 #pragma once
 
-constexpr auto kInCppect_js = R"js(
+// the main js module
+constexpr auto kIncppect_js = R"js(
 
     var incppect = {
         // websocket data

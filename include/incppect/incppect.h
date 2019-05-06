@@ -22,7 +22,6 @@ class Incppect {
             int32_t portListen = 3000;
             int32_t maxPayloadLength_bytes = 256*1024;
 
-            std::string patternWS = "/incppect";
             std::string httpRoot = ".";
 
             // todo:

@@ -155,9 +155,8 @@ int main(int argc, char ** argv) {
 
     Incppect::getInstance().runAsync(Incppect::Parameters {
         .portListen = port,
-            .maxPayloadLength_bytes = 256*1024,
-            .patternWS = "/incppect",
-            .httpRoot = httpRoot,
+        .maxPayloadLength_bytes = 256*1024,
+        .httpRoot = httpRoot,
     }).detach();
 
     while (true) {

@@ -63,124 +63,123 @@ struct Incppect::Impl {
     void run() {
         mainLoop = uWS::Loop::get();
 
-        uWS::App().ws<PerSocketData>(parameters.patternWS,
-                uWS::TemplatedApp<false>::WebSocketBehavior {
+        uWS::App().ws<PerSocketData>("/incppect", uWS::TemplatedApp<false>::WebSocketBehavior {
             .compression = uWS::SHARED_COMPRESSOR,
-                .maxPayloadLength = parameters.maxPayloadLength_bytes,
-                .idleTimeout = 120,
-                .open = [&](auto *ws, auto *req) {
-                    static int uniqueId = 1;
-                    ++uniqueId;
+            .maxPayloadLength = parameters.maxPayloadLength_bytes,
+            .idleTimeout = 120,
+            .open = [&](auto *ws, auto *req) {
+                static int uniqueId = 1;
+                ++uniqueId;
 
-                    auto & cd = clientData[uniqueId];
-                    cd.tConnected_ms = ::timestamp();
+                auto & cd = clientData[uniqueId];
+                cd.tConnected_ms = ::timestamp();
 
-                    auto addressBytes = ws->getRemoteAddress();
-                    cd.ipAddress[0] = addressBytes[12];
-                    cd.ipAddress[1] = addressBytes[13];
-                    cd.ipAddress[2] = addressBytes[14];
-                    cd.ipAddress[3] = addressBytes[15];
+                auto addressBytes = ws->getRemoteAddress();
+                cd.ipAddress[0] = addressBytes[12];
+                cd.ipAddress[1] = addressBytes[13];
+                cd.ipAddress[2] = addressBytes[14];
+                cd.ipAddress[3] = addressBytes[15];
 
-                    auto sd = (PerSocketData *) ws->getUserData();
-                    sd->clientId = uniqueId;
-                    sd->ws = ws;
-                    sd->mainLoop = uWS::Loop::get();
+                auto sd = (PerSocketData *) ws->getUserData();
+                sd->clientId = uniqueId;
+                sd->ws = ws;
+                sd->mainLoop = uWS::Loop::get();
 
-                    socketData.insert({ uniqueId, sd });
+                socketData.insert({ uniqueId, sd });
 
-                    my_printf("[incppect] client with id = %d connectd\n", sd->clientId);
-                },
-                .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
-                    rxTotal_bytes += message.size();
-                    if (message.size() < sizeof(int)) {
-                        return;
-                    }
-
-                    int * p = (int *) message.data();
-                    int type = p[0];
-                    auto sd = (PerSocketData *) ws->getUserData();
-
-                    auto & cd = clientData[sd->clientId];
-
-                    switch (type) {
-                        case 1:
-                            {
-                                std::stringstream ss(message.data() + 4);
-                                while (true) {
-                                    Request request;
-
-                                    std::string path;
-                                    ss >> path;
-                                    if (ss.eof()) break;
-                                    int requestId = 0;
-                                    ss >> requestId;
-                                    int nidxs = 0;
-                                    ss >> nidxs;
-                                    for (int i = 0; i < nidxs; ++i) {
-                                        int idx = 0;
-                                        ss >> idx;
-                                        request.idxs.push_back(idx);
-                                    }
-
-                                    if (pathToGetter.find(path) != pathToGetter.end()) {
-                                        my_printf("[incppect] requestId = %d, path = '%s', nidxs = %d\n", requestId, path.c_str(), nidxs);
-                                        request.getterId = pathToGetter[path];
-
-                                        cd.requests[requestId] = std::move(request);
-                                    } else {
-                                        my_printf("[incppect] missing path '%s'\n", path.c_str());
-                                    }
-                                }
-                            }
-                            break;
-                        case 2:
-                            {
-                                int nRequests = (message.size() - sizeof(int))/sizeof(int);
-                                my_printf("[incppect] received requests: %d\n", nRequests);
-
-                                cd.lastRequests.clear();
-                                for (int i = 0; i < nRequests; ++i) {
-                                    int curRequest = p[i + 1];
-                                    if (cd.requests.find(curRequest) != cd.requests.end()) {
-                                        cd.lastRequests.push_back(curRequest);
-                                        cd.requests[curRequest].tLastRequested_ms = ::timestamp();
-                                    }
-                                }
-                            }
-                            break;
-                        case 3:
-                            {
-                                for (auto curRequest : cd.lastRequests) {
-                                    if (cd.requests.find(curRequest) != cd.requests.end()) {
-                                        cd.requests[curRequest].tLastRequested_ms = ::timestamp();
-                                    }
-                                }
-                            }
-                            break;
-                        default:
-                            my_printf("[incppect] unknown message type: %d\n", type);
-                    };
-                    sd->mainLoop->defer([this]() { this->update(); });
-                },
-                .drain = [](auto *ws) {
-                    /* Check getBufferedAmount here */
-                    if (ws->getBufferedAmount() > 0) {
-                        my_printf("[incppect] drain: buffered amount = %d\n", ws->getBufferedAmount());
-                    }
-                },
-                .ping = [](auto *ws) {
-
-                },
-                .pong = [](auto *ws) {
-
-                },
-                .close = [&](auto *ws, int code, std::string_view message) {
-                    auto sd = (PerSocketData *) ws->getUserData();
-                    my_printf("[incppect] client with id = %d disconnected\n", sd->clientId);
-
-                    clientData.erase(sd->clientId);
-                    socketData.erase(sd->clientId);
+                my_printf("[incppect] client with id = %d connectd\n", sd->clientId);
+            },
+            .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
+                rxTotal_bytes += message.size();
+                if (message.size() < sizeof(int)) {
+                    return;
                 }
+
+                int * p = (int *) message.data();
+                int type = p[0];
+                auto sd = (PerSocketData *) ws->getUserData();
+
+                auto & cd = clientData[sd->clientId];
+
+                switch (type) {
+                    case 1:
+                        {
+                            std::stringstream ss(message.data() + 4);
+                            while (true) {
+                                Request request;
+
+                                std::string path;
+                                ss >> path;
+                                if (ss.eof()) break;
+                                int requestId = 0;
+                                ss >> requestId;
+                                int nidxs = 0;
+                                ss >> nidxs;
+                                for (int i = 0; i < nidxs; ++i) {
+                                    int idx = 0;
+                                    ss >> idx;
+                                    request.idxs.push_back(idx);
+                                }
+
+                                if (pathToGetter.find(path) != pathToGetter.end()) {
+                                    my_printf("[incppect] requestId = %d, path = '%s', nidxs = %d\n", requestId, path.c_str(), nidxs);
+                                    request.getterId = pathToGetter[path];
+
+                                    cd.requests[requestId] = std::move(request);
+                                } else {
+                                    my_printf("[incppect] missing path '%s'\n", path.c_str());
+                                }
+                            }
+                        }
+                        break;
+                    case 2:
+                        {
+                            int nRequests = (message.size() - sizeof(int))/sizeof(int);
+                            my_printf("[incppect] received requests: %d\n", nRequests);
+
+                            cd.lastRequests.clear();
+                            for (int i = 0; i < nRequests; ++i) {
+                                int curRequest = p[i + 1];
+                                if (cd.requests.find(curRequest) != cd.requests.end()) {
+                                    cd.lastRequests.push_back(curRequest);
+                                    cd.requests[curRequest].tLastRequested_ms = ::timestamp();
+                                }
+                            }
+                        }
+                        break;
+                    case 3:
+                        {
+                            for (auto curRequest : cd.lastRequests) {
+                                if (cd.requests.find(curRequest) != cd.requests.end()) {
+                                    cd.requests[curRequest].tLastRequested_ms = ::timestamp();
+                                }
+                            }
+                        }
+                        break;
+                    default:
+                        my_printf("[incppect] unknown message type: %d\n", type);
+                };
+                sd->mainLoop->defer([this]() { this->update(); });
+            },
+            .drain = [](auto *ws) {
+                /* Check getBufferedAmount here */
+                if (ws->getBufferedAmount() > 0) {
+                    my_printf("[incppect] drain: buffered amount = %d\n", ws->getBufferedAmount());
+                }
+            },
+            .ping = [](auto *ws) {
+
+            },
+            .pong = [](auto *ws) {
+
+            },
+            .close = [&](auto *ws, int code, std::string_view message) {
+                auto sd = (PerSocketData *) ws->getUserData();
+                my_printf("[incppect] client with id = %d disconnected\n", sd->clientId);
+
+                clientData.erase(sd->clientId);
+                socketData.erase(sd->clientId);
+            }
         }).get("/incppect.js", [this](auto *res, auto *req) {
             res->end(kIncppect_js);
         }).get("/*", [this](auto *res, auto *req) {

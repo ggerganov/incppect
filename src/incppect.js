@@ -264,27 +264,4 @@
 
         render: function() {
         },
-
-        //render_default: function() {
-        //    var nclients = this.get_int32('incppect.nclients');
-        //    var tx_total = this.get_int32('incppect.tx_total');
-        //    var rx_total = this.get_int32('incppect.rx_total');
-
-        //    this.output.innerHTML = 'nclients = ' + nclients;
-        //    for (var i = 0; i < nclients; ++i) {
-        //        var ipaddress_bytes = this.get_int32('incppect.ip_address[%d]', i);
-        //        function int_to_ip(int) {
-        //            var part1 = int & 255;
-        //            var part2 = ((int >> 8) & 255);
-        //            var part3 = ((int >> 16) & 255);
-        //            var part4 = ((int >> 24) & 255);
-
-        //            return part1 + "." + part2 + "." + part3 + "." + part4;
-        //        }
-        //        this.output.innerHTML += '<br>client ' + i + ' : ' + int_to_ip(ipaddress_bytes);
-        //    }
-        //    this.output.innerHTML += '<br>tx total = ' + (tx_total/1024.0/1024.0).toFixed(4) + ' MB';
-        //    this.output.innerHTML += '<br>rx total = ' + (rx_total/1024.0/1024.0).toFixed(4) + ' MB';
-        //    this.output.innerHTML += '<br>';
-        //},
     }

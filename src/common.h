@@ -45,15 +45,17 @@ constexpr auto kIncppect_js = R"js(
         init: function() {
             this.output = document.getElementById("incppect");
 
+            var onopen = this.onopen.bind(this);
             var onclose = this.onclose.bind(this);
             var onmessage = this.onmessage.bind(this);
+            var onerror = this.onerror.bind(this);
 
             this.ws = new WebSocket(this.ws_uri);
             this.ws.binaryType = 'arraybuffer';
-            this.ws.onopen = function(evt) { };
+            this.ws.onopen = function(evt) { onopen(evt) };
             this.ws.onclose = function(evt) { onclose(evt) };
             this.ws.onmessage = function(evt) { onmessage(evt) };
-            this.ws.onerror = function(evt) { };
+            this.ws.onerror = function(evt) { onerror(evt) };
 
             this.t_start_ms = this.timestamp();
             this.t_requests_last_update_ms = this.timestamp() - this.k_requests_update_freq_ms;
@@ -207,6 +209,9 @@ constexpr auto kIncppect_js = R"js(
             }
         },
 
+        onopen: function(evt) {
+        },
+
         onclose: function(evt) {
             this.nvars = 0;
             this.vars_map = {};
@@ -216,11 +221,11 @@ constexpr auto kIncppect_js = R"js(
             this.ws = null;
         },
 
-        onmessage: function(buf) {
+        onmessage: function(evt) {
             var offset = 0;
             var offset_new = 0;
-            var int_view = new Int32Array(buf.data);
-            var total_size = buf.data.byteLength;
+            var int_view = new Int32Array(evt.data);
+            var total_size = evt.data.byteLength;
             var id = 0;
             var len = 0;
             while (4*offset < total_size) {
@@ -228,9 +233,12 @@ constexpr auto kIncppect_js = R"js(
                 len = int_view[offset + 1];
                 offset += 2;
                 offset_new = offset + len/4;
-                this.vars_map[this.id_to_var[id]] = buf.data.slice(4*offset, 4*offset_new);
+                this.vars_map[this.id_to_var[id]] = evt.data.slice(4*offset, 4*offset_new);
                 offset = offset_new;
             }
+        },
+
+        onerror: function(evt) {
         },
 
         render: function() {

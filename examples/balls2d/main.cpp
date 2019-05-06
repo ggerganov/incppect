@@ -148,6 +148,8 @@ int main(int argc, char ** argv) {
     std::string httpRoot = argc > 2 ? argv[2] : ".";
     int nCircles = argc > 3 ? atoi(argv[3]) : 64;
 
+    nCircles = std::max(1, std::min(128, nCircles));
+
     State state;
     state.init(nCircles);
 

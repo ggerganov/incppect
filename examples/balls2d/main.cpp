@@ -1,5 +1,5 @@
 /*! \file main.cpp
- *  \brief Enter description here.
+ *  \brief Elastic 2d collisions
  *  \author Georgi Gerganov
  */
 
@@ -11,7 +11,7 @@
 
 inline float frand() { return (float)(rand())/RAND_MAX; }
 
-struct Circle {
+struct Ball {
     float r = 0.0f;
     float m = 0.0f;
 
@@ -26,7 +26,7 @@ float dist2(const float r0, const float r1) {
     return (r0 + r1)*(r0 + r1);
 }
 
-float dist2(const Circle & c0, const Circle & c1) {
+float dist2(const Ball & c0, const Ball & c1) {
     return (c0.x - c1.x)*(c0.x - c1.x) + (c0.y - c1.y)*(c0.y - c1.y);
 }
 
@@ -34,66 +34,66 @@ struct State {
     State() {
         Incppect::getInstance().var("state.dt", [this](const auto & idxs) { return Incppect::view(dt); });
 
-        Incppect::getInstance().var("state.ncircles", [this](const auto & idxs) {
+        Incppect::getInstance().var("state.nballs", [this](const auto & idxs) {
             static int n = 0;
-            n = circles.size();
+            n = balls.size();
             return Incppect::view(n);
         });
 
         Incppect::getInstance().var("state.dt", [this](const auto & idxs) { return Incppect::view(dt); });
         Incppect::getInstance().var("state.energy", [this](const auto & idxs) { return Incppect::view(energy); });
 
-        Incppect::getInstance().var("state.circle[%d].r", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].r); });
-        Incppect::getInstance().var("state.circle[%d].m", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].m); });
-        Incppect::getInstance().var("state.circle[%d].x", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].x); });
-        Incppect::getInstance().var("state.circle[%d].y", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].y); });
-        Incppect::getInstance().var("state.circle[%d].vx", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].vx); });
-        Incppect::getInstance().var("state.circle[%d].vy", [this](const auto & idxs) { return Incppect::view(circles[idxs[0]].vy); });
+        Incppect::getInstance().var("state.ball[%d].r", [this](const auto & idxs) { return Incppect::view(balls[idxs[0]].r); });
+        Incppect::getInstance().var("state.ball[%d].m", [this](const auto & idxs) { return Incppect::view(balls[idxs[0]].m); });
+        Incppect::getInstance().var("state.ball[%d].x", [this](const auto & idxs) { return Incppect::view(balls[idxs[0]].x); });
+        Incppect::getInstance().var("state.ball[%d].y", [this](const auto & idxs) { return Incppect::view(balls[idxs[0]].y); });
+        Incppect::getInstance().var("state.ball[%d].vx", [this](const auto & idxs) { return Incppect::view(balls[idxs[0]].vx); });
+        Incppect::getInstance().var("state.ball[%d].vy", [this](const auto & idxs) { return Incppect::view(balls[idxs[0]].vy); });
     }
 
-    void init(int nCircles) {
-        circles.resize(nCircles);
-        for (int i = 0; i < nCircles; ++i) {
-            auto & circle = circles[i];
-            circle.r = 0.05f*frand() + 0.02f;
-            circle.m = circle.r*circle.r;
+    void init(int nBalls) {
+        balls.resize(nBalls);
+        for (int i = 0; i < nBalls; ++i) {
+            auto & ball = balls[i];
+            ball.r = 0.05f*frand() + 0.02f;
+            ball.m = ball.r*ball.r;
 
-            circle.x = 2.0f*frand() - 1.0f;
-            circle.y = 2.0f*frand() - 1.0f;
+            ball.x = 2.0f*frand() - 1.0f;
+            ball.y = 2.0f*frand() - 1.0f;
 
-            circle.vx = 2.0f*frand() - 1.0f;
-            circle.vy = 2.0f*frand() - 1.0f;
+            ball.vx = 2.0f*frand() - 1.0f;
+            ball.vy = 2.0f*frand() - 1.0f;
         }
     }
 
     void update() {
         float energy = 0.0;
 
-        for (auto & circle : circles) {
-            circle.x += circle.vx*dt;
-            circle.y += circle.vy*dt;
+        for (auto & ball : balls) {
+            ball.x += ball.vx*dt;
+            ball.y += ball.vy*dt;
 
-            if (circle.x - circle.r < -1.0f) circle.vx =  std::abs(circle.vx);
-            if (circle.y - circle.r < -1.0f) circle.vy =  std::abs(circle.vy);
-            if (circle.x + circle.r >  1.0f) circle.vx = -std::abs(circle.vx);
-            if (circle.y + circle.r >  1.0f) circle.vy = -std::abs(circle.vy);
+            if (ball.x - ball.r < -1.0f) ball.vx =  std::abs(ball.vx);
+            if (ball.y - ball.r < -1.0f) ball.vy =  std::abs(ball.vy);
+            if (ball.x + ball.r >  1.0f) ball.vx = -std::abs(ball.vx);
+            if (ball.y + ball.r >  1.0f) ball.vy = -std::abs(ball.vy);
 
-            if (circle.x < -2.0f || circle.y < -2.0f || circle.x >  2.0f || circle.y >  2.0f) {
-                circle.x = std::max(circle.x, -1.0f);
-                circle.x = std::min(circle.x,  1.0f);
-                circle.y = std::max(circle.y, -1.0f);
-                circle.y = std::min(circle.y,  1.0f);
+            if (ball.x < -2.0f || ball.y < -2.0f || ball.x >  2.0f || ball.y >  2.0f) {
+                ball.x = std::max(ball.x, -1.0f);
+                ball.x = std::min(ball.x,  1.0f);
+                ball.y = std::max(ball.y, -1.0f);
+                ball.y = std::min(ball.y,  1.0f);
             }
 
-            energy += circle.m*(circle.vx*circle.vx + circle.vy*circle.vy);
+            energy += ball.m*(ball.vx*ball.vx + ball.vy*ball.vy);
         }
 
         this->energy = energy;
 
-        for (int i = 0; i < circles.size(); ++i) {
-            auto & c0 = circles[i];
-            for (int j = i + 1; j < circles.size(); ++j) {
-                auto & c1 = circles[j];
+        for (int i = 0; i < balls.size(); ++i) {
+            auto & c0 = balls[i];
+            for (int j = i + 1; j < balls.size(); ++j) {
+                auto & c1 = balls[j];
 
                 float d2 = ::dist2(c0, c1);
                 if (d2 > ::dist2(c0.r, c1.r)) continue;
@@ -138,20 +138,20 @@ struct State {
     float dt = 0.001f;
     float energy = 0.0f;
 
-    std::vector<Circle> circles;
+    std::vector<Ball> balls;
 };
 
 int main(int argc, char ** argv) {
-	printf("Usage: %s [port] [httpRoot] [nCircles]\n", argv[0]);
+	printf("Usage: %s [port] [httpRoot] [nBalls]\n", argv[0]);
 
     int port = argc > 1 ? atoi(argv[1]) : 3000;
     std::string httpRoot = argc > 2 ? argv[2] : ".";
-    int nCircles = argc > 3 ? atoi(argv[3]) : 64;
+    int nBalls = argc > 3 ? atoi(argv[3]) : 64;
 
-    nCircles = std::max(1, std::min(128, nCircles));
+    nBalls = std::max(1, std::min(128, nBalls));
 
     State state;
-    state.init(nCircles);
+    state.init(nBalls);
 
     Incppect::getInstance().runAsync(Incppect::Parameters {
         .portListen = port,
@@ -162,7 +162,7 @@ int main(int argc, char ** argv) {
     while (true) {
         state.update();
 
-		std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     return 0;

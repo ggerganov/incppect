@@ -3,6 +3,8 @@
     <script type="text/javascript" src="incppect.js"></script>
     <script language="javascript" type="text/javascript">
         incppect.render = function() {
+            var output = document.getElementById("incppect");
+
             var nballs = this.get_int32('state.nballs');
             var dt = this.get_float('state.dt');
             var energy = this.get_float('state.energy');
@@ -15,13 +17,12 @@
             var height = canvas.height;
             var ctx = canvas.getContext("2d");
 
-            this.output.innerHTML = '';
+            output.innerHTML = '';
 
-            this.render_default();
-
-            this.output.innerHTML += '<br>nballs = ' + nballs;
-            this.output.innerHTML += '<br>dt = ' + dt.toFixed(4);
-            this.output.innerHTML += '<br>energy = ' + energy.toFixed(4);
+            output.innerHTML += 'nballs = ' + nballs + '<br>';
+            output.innerHTML += 'dt = ' + dt.toFixed(4) + '<br>';
+            output.innerHTML += 'energy = ' + energy.toFixed(4) + '<br>';
+            output.innerHTML += 'update freq = ' + incppect.k_requests_update_freq_ms + ' ms<br>';
 
             ctx.clearRect(0, 0, width, height);
             for (var i = 0; i < nballs; ++i) {
@@ -54,21 +55,32 @@
                 ctx.stroke();
             }
         }
+
+        incppect.onerror = function(evt) {
+            var output = document.getElementById("incppect");
+
+            if (typeof evt === 'object') {
+                output.innerHTML = 'Error: check console for more information';
+                console.error(evt);
+            } else {
+                output.innerHTML = evt;
+            }
+        }
+
+        incppect.init();
+
     </script>
 </head>
 
-<body onLoad="incppect.init()">
-
-<h3>InCppect</h3>
-
-<div id="incppect"></div>
+<body>
+<h3>Incppect example: balls2d</h3>
+<div id="incppect"></div><br>
 <div id="controls">
     <input type="checkbox" id="show_ids">Show ids</input> <br>
     <input type="checkbox" id="show_velocities">Show velocities</input> <br>
-    <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms] <br>
-</div>
-<canvas id="canvas_balls" width="256px" height="256px" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
-<textarea rows=20 cols=120 id="src_render"></textarea>
+    <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms]<br>
+</div><br>
+<canvas id="canvas_balls" width="256px" height="256px" style="border:1px solid #d3d3d3;">Your browser does not support the HTML5 canvas tag.</canvas>
 
 </body>
 </html>

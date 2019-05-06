@@ -8,6 +8,18 @@
 // the main js module
 constexpr auto kIncppect_js = R"js(
 
+    //src_render: null,
+
+    //this.src_render = this.render.toString().match(/function[^{]+\{([\s\S]*)\}$/)[1];
+    //document.getElementById('src_render').value = this.src_render;
+
+    //var this_ref = this;
+    //document.getElementById('src_render').addEventListener('keydown', function (e){
+    //    if ((e.ctrlKey || e.metaKey) && (e.keyCode == 13 || e.keyCode == 10)) {
+    //        this_ref.render = new Function(this.value);
+    //    }
+    //}, false);
+
     var incppect = {
         // websocket data
         ws: null,
@@ -34,17 +46,12 @@ constexpr auto kIncppect_js = R"js(
         k_var_delim: ' ',
         k_requests_update_freq_ms: 50,
 
-        src_render: null,
-        output: null,
-
         timestamp: function() {
             return window.performance && window.performance.now && window.performance.timing &&
                 window.performance.timing.navigationStart ? window.performance.now() + window.performance.timing.navigationStart : Date.now();
         },
 
         init: function() {
-            this.output = document.getElementById("incppect");
-
             var onopen = this.onopen.bind(this);
             var onclose = this.onclose.bind(this);
             var onmessage = this.onmessage.bind(this);
@@ -59,16 +66,6 @@ constexpr auto kIncppect_js = R"js(
 
             this.t_start_ms = this.timestamp();
             this.t_requests_last_update_ms = this.timestamp() - this.k_requests_update_freq_ms;
-
-            this.src_render = this.render.toString().match(/function[^{]+\{([\s\S]*)\}$/)[1];
-            document.getElementById('src_render').value = this.src_render;
-
-            var this_ref = this;
-            document.getElementById('src_render').addEventListener('keydown', function (e){
-                if ((e.ctrlKey || e.metaKey) && (e.keyCode == 13 || e.keyCode == 10)) {
-                    this_ref.render = new Function(this.value);
-                }
-            }, false);
 
             window.requestAnimationFrame(this.loop.bind(this));
         },
@@ -94,7 +91,7 @@ constexpr auto kIncppect_js = R"js(
                 try {
                     this.render();
                 } catch(err) {
-                    this.output.innerHTML = 'Failed to render state: ' + err;
+                    this.onerror('Failed to render state: ' + err);
                 }
             }
 
@@ -140,6 +137,15 @@ constexpr auto kIncppect_js = R"js(
             return new Int8Array(abuf);
         },
 
+        get_uint8: function(path, ...args) {
+            return this.get_int16_arr(path, ...args)[0];
+        },
+
+        get_uint8_arr: function(path, ...args) {
+            var abuf = this.get(path, ...args);
+            return new Uint8Array(abuf);
+        },
+
         get_int16: function(path, ...args) {
             return this.get_int16_arr(path, ...args)[0];
         },
@@ -147,6 +153,15 @@ constexpr auto kIncppect_js = R"js(
         get_int16_arr: function(path, ...args) {
             var abuf = this.get(path, ...args);
             return new Int16Array(abuf);
+        },
+
+        get_uint16: function(path, ...args) {
+            return this.get_int16_arr(path, ...args)[0];
+        },
+
+        get_uint16_arr: function(path, ...args) {
+            var abuf = this.get(path, ...args);
+            return new Uint16Array(abuf);
         },
 
         get_int32: function(path, ...args) {
@@ -158,6 +173,15 @@ constexpr auto kIncppect_js = R"js(
             return new Int32Array(abuf);
         },
 
+        get_uint32: function(path, ...args) {
+            return this.get_int32_arr(path, ...args)[0];
+        },
+
+        get_uint32_arr: function(path, ...args) {
+            var abuf = this.get(path, ...args);
+            return new Uint32Array(abuf);
+        },
+
         get_float: function(path, ...args) {
             return this.get_float_arr(path, ...args)[0];
         },
@@ -165,6 +189,11 @@ constexpr auto kIncppect_js = R"js(
         get_float_arr: function(path, ...args) {
             var abuf = this.get(path, ...args);
             return new Float32Array(abuf);
+        },
+
+        get_str: function(path, ...args) {
+            var abuf = this.get(path, ...args);
+            return String.fromCharCode.apply(null, new Uint8Array(abuf));
         },
 
         send_var_to_id_map: function() {
@@ -186,7 +215,7 @@ constexpr auto kIncppect_js = R"js(
 
         send_requests: function() {
             var same = true;
-            if (this.requests.length !== this.requests_old.length){
+            if (this.requests_old === null || this.requests.length !== this.requests_old.length){
                 same = false;
             } else {
                 for (var i = 0; i < this.requests.length; ++i) {
@@ -217,6 +246,7 @@ constexpr auto kIncppect_js = R"js(
             this.vars_map = {};
             this.var_to_id = {};
             this.id_to_var = {};
+            this.requests = null;
             this.requests_old = null;
             this.ws = null;
         },
@@ -239,33 +269,34 @@ constexpr auto kIncppect_js = R"js(
         },
 
         onerror: function(evt) {
+            console.error("[incppect]", evt);
         },
 
         render: function() {
         },
 
-        render_default: function() {
-            var nclients = this.get_int32('incppect.nclients');
-            var tx_total = this.get_int32('incppect.tx_total');
-            var rx_total = this.get_int32('incppect.rx_total');
+        //render_default: function() {
+        //    var nclients = this.get_int32('incppect.nclients');
+        //    var tx_total = this.get_int32('incppect.tx_total');
+        //    var rx_total = this.get_int32('incppect.rx_total');
 
-            this.output.innerHTML = 'nclients = ' + nclients;
-            for (var i = 0; i < nclients; ++i) {
-                var ipaddress_bytes = this.get_int32('incppect.ip_address[%d]', i);
-                function int_to_ip(int) {
-                    var part1 = int & 255;
-                    var part2 = ((int >> 8) & 255);
-                    var part3 = ((int >> 16) & 255);
-                    var part4 = ((int >> 24) & 255);
+        //    this.output.innerHTML = 'nclients = ' + nclients;
+        //    for (var i = 0; i < nclients; ++i) {
+        //        var ipaddress_bytes = this.get_int32('incppect.ip_address[%d]', i);
+        //        function int_to_ip(int) {
+        //            var part1 = int & 255;
+        //            var part2 = ((int >> 8) & 255);
+        //            var part3 = ((int >> 16) & 255);
+        //            var part4 = ((int >> 24) & 255);
 
-                    return part1 + "." + part2 + "." + part3 + "." + part4;
-                }
-                this.output.innerHTML += '<br>client ' + i + ' : ' + int_to_ip(ipaddress_bytes);
-            }
-            this.output.innerHTML += '<br>tx total = ' + (tx_total/1024.0/1024.0).toFixed(4) + ' MB';
-            this.output.innerHTML += '<br>rx total = ' + (rx_total/1024.0/1024.0).toFixed(4) + ' MB';
-            this.output.innerHTML += '<br>';
-        },
+        //            return part1 + "." + part2 + "." + part3 + "." + part4;
+        //        }
+        //        this.output.innerHTML += '<br>client ' + i + ' : ' + int_to_ip(ipaddress_bytes);
+        //    }
+        //    this.output.innerHTML += '<br>tx total = ' + (tx_total/1024.0/1024.0).toFixed(4) + ' MB';
+        //    this.output.innerHTML += '<br>rx total = ' + (rx_total/1024.0/1024.0).toFixed(4) + ' MB';
+        //    this.output.innerHTML += '<br>';
+        //},
     }
 
 

@@ -1,0 +1,40 @@
+<html>
+<head>
+    <script type="text/javascript" src="incppect.js"></script>
+    <script language="javascript" type="text/javascript">
+
+        incppect.render = function() {
+            var output = document.getElementById("incppect");
+
+            // print some C++ variables
+            output.innerHTML = '';
+            output.innerHTML += 'var_int8 = ' + this.get_int8('var_int8') + '<br>';
+            output.innerHTML += 'var_int16 = ' + this.get_int16('var_int16') + '<br>';
+            output.innerHTML += 'var_int32 = ' + this.get_int32('var_int32') + '<br>';
+            output.innerHTML += 'var_int32_arr = ' + this.get_int32_arr('var_int32_arr') + '<br>';
+            output.innerHTML += 'var_int32_arr[2] = ' + this.get_int32_arr('var_int32_arr[%d]', 2) + '<br>';
+            output.innerHTML += 'var_float = ' + this.get_float('var_float') + '<br>';
+            output.innerHTML += 'var_str = ' + this.get_str('var_str') + '<br>';
+        }
+
+        incppect.onerror = function(evt) {
+            var output = document.getElementById("incppect");
+
+            if (typeof evt === 'object') {
+                output.innerHTML = 'Error: check console for more information';
+                console.error(evt);
+            } else {
+                output.innerHTML = evt;
+            }
+        }
+
+        incppect.init();
+
+    </script>
+</head>
+
+<body>
+<h3>Incppect example: hello-browser</h3>
+<div id="incppect"></div>
+</body>
+</html>

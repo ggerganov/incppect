@@ -12,6 +12,8 @@
                 var output = document.createElement('div');
                 document.body.appendChild( output );
 
+                incppect.k_requests_update_freq_ms = 20;
+
                 // define incppect client functions
                 incppect.render = function() {
                     // get control elements
@@ -88,7 +90,7 @@
         <div id="controls">
             <input type="checkbox" id="show_ids">Show ids</input> <br>
             <input type="checkbox" id="show_velocities" checked>Show velocities</input> <br>
-            <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms]<br>
+            <input type="range" min="20" max="200" value="20" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms]<br>
         </div><br>
 
         <canvas id="canvas_balls" width="256px" height="256px" style="border:1px solid #d3d3d3;">Your browser does not support the HTML5 canvas tag.</canvas>

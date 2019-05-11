@@ -9,7 +9,7 @@ int main(int argc, char ** argv) {
 	printf("Usage: %s [port] [httpRoot]\n", argv[0]);
 
     int port = argc > 1 ? atoi(argv[1]) : 3000;
-    std::string httpRoot = argc > 2 ? argv[2] : "../examples/static";
+    std::string httpRoot = argc > 2 ? argv[2] : "../examples";
 
     Incppect::getInstance().runAsync(Incppect::Parameters {
         .portListen = port,

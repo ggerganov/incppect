@@ -24,14 +24,15 @@ In your C++ program add something along these lines:
 #include "incppect/incppect.h"
 
 // start the web server in a dedicated thread
-Incppect::getInstance().runAsync(...);
+auto & incppect = Incppect::getInstance();
+incppect.runAsync(...);
 
 int32_t some_var;
 float some_arr[10];
     
 // define variables that can be requested from the web clients
-var("path0", [&](auto ) { return Incppect::view(some_var); });
-var("path1[%d]", [&](auto idxs) { return Incppect::view(some_arr[idxs[0]]); });
+incppect.var("path0", [&](auto ) { return Incppect::view(some_var); });
+incppect.var("path1[%d]", [&](auto idxs) { return Incppect::view(some_arr[idxs[0]]); });
 
 ```
 

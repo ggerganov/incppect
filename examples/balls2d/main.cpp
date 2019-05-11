@@ -133,8 +133,11 @@ struct State {
                 }
             }
         }
+
+        this->t += dt;
     }
 
+    float t = 0.000f;
     float dt = 0.001f;
     float energy = 0.0f;
 
@@ -159,7 +162,13 @@ int main(int argc, char ** argv) {
         .httpRoot = httpRoot + "/balls2d",
     }).detach();
 
+    float checkpoint = 0.0f;
     while (true) {
+        if (state.t > checkpoint) {
+            printf(" - Simulating 2D elastic collisions at t = %4.2f ...\n", state.t);
+            checkpoint += 1.0f;
+        }
+
         state.update();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

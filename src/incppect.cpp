@@ -252,11 +252,19 @@ struct Incppect::Impl {
                     }
                 }
             }
+
             if (socketData[clientId]->ws->getBufferedAmount()) {
                 my_printf("[incppect] update: buffered amount = %d\n", socketData[clientId]->ws->getBufferedAmount());
             }
+
             if (buffer.size() > 0) {
-                socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY);
+                if (buffer.size() > parameters.maxPayloadLength_bytes) {
+                    my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) buffer.size(), parameters.maxPayloadLength_bytes);
+                }
+
+                if (socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY) == false) {
+                    my_printf("[incpeect] error: failed to send data to clinet %d\n", clientId);
+                }
                 txTotal_bytes += buffer.size();
             }
         }

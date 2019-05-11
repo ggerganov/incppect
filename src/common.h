@@ -8,18 +8,6 @@
 // the main js module
 constexpr auto kIncppect_js = R"js(
 
-    //src_render: null,
-
-    //this.src_render = this.render.toString().match(/function[^{]+\{([\s\S]*)\}$/)[1];
-    //document.getElementById('src_render').value = this.src_render;
-
-    //var this_ref = this;
-    //document.getElementById('src_render').addEventListener('keydown', function (e){
-    //    if ((e.ctrlKey || e.metaKey) && (e.keyCode == 13 || e.keyCode == 10)) {
-    //        this_ref.render = new Function(this.value);
-    //    }
-    //}, false);
-
     var incppect = {
         // websocket data
         ws: null,

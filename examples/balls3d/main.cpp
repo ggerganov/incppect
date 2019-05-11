@@ -165,7 +165,7 @@ int main(int argc, char ** argv) {
 	printf("Usage: %s [port] [httpRoot] [nBalls]\n", argv[0]);
 
     int port = argc > 1 ? atoi(argv[1]) : 3000;
-    std::string httpRoot = argc > 2 ? argv[2] : ".";
+    std::string httpRoot = argc > 2 ? argv[2] : "../examples/static";
     int nBalls = argc > 3 ? atoi(argv[3]) : 64;
 
     nBalls = std::max(1, std::min(128, nBalls));
@@ -176,7 +176,7 @@ int main(int argc, char ** argv) {
     Incppect::getInstance().runAsync(Incppect::Parameters {
         .portListen = port,
         .maxPayloadLength_bytes = 256*1024,
-        .httpRoot = httpRoot,
+        .httpRoot = httpRoot + "/balls3d",
     }).detach();
 
     while (true) {

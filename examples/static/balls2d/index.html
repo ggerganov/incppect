@@ -1,0 +1,96 @@
+<html>
+    <head>
+        <script src="incppect.js"></script>
+    </head>
+
+    <body>
+        <h3>Incppect example: balls2d</h3>
+
+        <script>
+            function init() {
+                // create output element
+                var output = document.createElement('div');
+                document.body.appendChild( output );
+
+                // define incppect client functions
+                incppect.render = function() {
+                    // get control elements
+                    var show_ids = document.getElementById('show_ids').checked;
+                    var show_velocities = document.getElementById('show_velocities').checked;
+                    var canvas = document.getElementById("canvas_balls");
+                    var width = canvas.width;
+                    var height = canvas.height;
+                    var ctx = canvas.getContext("2d");
+
+                    output.innerHTML = '';
+
+                    // request c++ data
+                    var nballs = this.get_int32('state.nballs');
+                    var dt = this.get_float('state.dt');
+                    var energy = this.get_float('state.energy');
+                    var update_freq = incppect.k_requests_update_freq_ms;
+
+                    output.innerHTML += 'nballs = ' + nballs + '<br>';
+                    output.innerHTML += 'dt = ' + dt.toFixed(4) + '<br>';
+                    output.innerHTML += 'energy = ' + energy.toFixed(4) + '<br>';
+                    output.innerHTML += 'update freq = ' + update_freq + ' ms<br>';
+
+                    ctx.clearRect(0, 0, width, height);
+                    for (var i = 0; i < nballs; ++i) {
+                        // request c++ data for i'th ball
+                        var r = this.get_float('state.ball[%d].r', i);
+                        var m = this.get_float('state.ball[%d].m', i);
+                        var x = this.get_float('state.ball[%d].x', i);
+                        var y = this.get_float('state.ball[%d].y', i);
+
+                        // canvas coordinates
+                        var cx = 0.5*(1.0 + x)*width;
+                        var cy = 0.5*(1.0 + y)*height;
+
+                        // draw balls
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 0.5*width*r, 0, 2.0*Math.PI);
+
+                        if (show_ids) {
+                            ctx.fillText(i, cx - 4, cy - 0.5*width*r - 2);
+                        }
+
+                        if (show_velocities) {
+                            var vx = this.get_float('state.ball[%d].vx', i);
+                            var vy = this.get_float('state.ball[%d].vy', i);
+
+                            ctx.moveTo(cx, cy);
+                            ctx.lineTo(cx + 0.5*30*vx*m*width, cy + 0.5*30.0*vy*m*height);
+                        }
+
+                        ctx.stroke();
+                    }
+                }
+
+                incppect.onerror = function(evt) {
+                    if (typeof evt === 'object') {
+                        output.innerHTML = 'Error: check console for more information';
+                        console.error(evt);
+                    } else {
+                        output.innerHTML = evt;
+                    }
+                }
+
+                // initialize incppect client
+                incppect.init();
+            }
+
+            init();
+        </script>
+
+        <br>
+
+        <div id="controls">
+            <input type="checkbox" id="show_ids">Show ids</input> <br>
+            <input type="checkbox" id="show_velocities" checked>Show velocities</input> <br>
+            <input type="range" min="20" max="200" value="50" class="slider" id="update_freq_ms" onChange="incppect.k_requests_update_freq_ms = this.value">Update freq [ms]<br>
+        </div><br>
+
+        <canvas id="canvas_balls" width="256px" height="256px" style="border:1px solid #d3d3d3;">Your browser does not support the HTML5 canvas tag.</canvas>
+    </body>
+</html>

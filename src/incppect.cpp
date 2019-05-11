@@ -63,6 +63,8 @@ struct Incppect::Impl {
     void run() {
         mainLoop = uWS::Loop::get();
 
+        my_printf("[incppect] running instance. serving HTTP from '%s'\n", parameters.httpRoot.c_str());
+
         uWS::App().ws<PerSocketData>("/incppect", uWS::TemplatedApp<false>::WebSocketBehavior {
             .compression = uWS::SHARED_COMPRESSOR,
             .maxPayloadLength = parameters.maxPayloadLength_bytes,

@@ -9,12 +9,12 @@ int main(int argc, char ** argv) {
 	printf("Usage: %s [port] [httpRoot]\n", argv[0]);
 
     int port = argc > 1 ? atoi(argv[1]) : 3000;
-    std::string httpRoot = argc > 2 ? argv[2] : ".";
+    std::string httpRoot = argc > 2 ? argv[2] : "../examples/static";
 
     Incppect::getInstance().runAsync(Incppect::Parameters {
         .portListen = port,
         .maxPayloadLength_bytes = 256*1024,
-        .httpRoot = httpRoot,
+        .httpRoot = httpRoot + "/hello-browser",
     }).detach();
 
     int8_t  var_int8  = 1;

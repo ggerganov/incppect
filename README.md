@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/ggerganov/incppect.svg?branch=master)](https://travis-ci.org/ggerganov/incppect?branch=master)
+
 # incppect
 
 Inspect C++ memory in the browser

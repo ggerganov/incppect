@@ -90,6 +90,10 @@ struct Incppect::Impl {
                 socketData.insert({ uniqueId, sd });
 
                 my_printf("[incppect] client with id = %d connectd\n", sd->clientId);
+
+                if (handler) {
+                    handler(sd->clientId, Connect, { nullptr, 0 } );
+                }
             },
             .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
                 rxTotal_bytes += message.size();
@@ -158,6 +162,13 @@ struct Incppect::Impl {
                             }
                         }
                         break;
+                    case 4:
+                        {
+                            if (handler && message.size() > sizeof(int)) {
+                                handler(sd->clientId, Custom, { message.data() + sizeof(int), message.size() - sizeof(int) } );
+                            }
+                        }
+                        break;
                     default:
                         my_printf("[incppect] unknown message type: %d\n", type);
                 };
@@ -181,6 +192,10 @@ struct Incppect::Impl {
 
                 clientData.erase(sd->clientId);
                 socketData.erase(sd->clientId);
+
+                if (handler) {
+                    handler(sd->clientId, Disconnect, { nullptr, 0 } );
+                }
             }
         }).get("/incppect.js", [this](auto *res, auto *req) {
             res->end(kIncppect_js);
@@ -265,7 +280,7 @@ struct Incppect::Impl {
                 }
 
                 if (socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY) == false) {
-                    my_printf("[incpeect] error: failed to send data to clinet %d\n", clientId);
+                    my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
                 }
                 txTotal_bytes += buffer.size();
             }
@@ -283,6 +298,8 @@ struct Incppect::Impl {
     uWS::Loop * mainLoop = nullptr;
     std::map<int, PerSocketData *> socketData;
     std::map<int, ClientData> clientData;
+
+    THandler handler = nullptr;
 };
 
 Incppect::Incppect() : m_impl(new Impl()) {
@@ -319,4 +336,8 @@ bool Incppect::var(const TPath & path, TGetter && getter) {
     m_impl->getters.emplace_back(std::move(getter));
 
     return true;
+}
+
+void Incppect::handler(THandler && handler) {
+    m_impl->handler = std::move(handler);
 }

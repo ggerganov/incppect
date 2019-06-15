@@ -14,9 +14,16 @@
 
 class Incppect {
     public:
+        enum EventType {
+            Connect,
+            Disconnect,
+            Custom,
+        };
+
         using TPath = std::string;
         using TIdxs = std::vector<int>;
         using TGetter = std::function<std::string_view(const TIdxs & idxs)>;
+        using THandler = std::function<void(int clientId, EventType etype, std::string_view)>;
 
         // service parameters
         struct Parameters {
@@ -52,11 +59,18 @@ class Incppect {
         //
         bool var(const TPath & path, TGetter && getter);
 
+        // handle input from the clients
+        void handler(THandler && handler);
+
         // shorthand for string_view from var
-        template<typename T>
+        template <typename T>
             static std::string_view view(const T & v) {
                 return std::string_view { (char *)(&v), sizeof(v) };
             }
+
+        static std::string_view view(const std::string & v) {
+            return std::string_view { v.data(), v.size() };
+        }
 
         // get global instance
         static Incppect & getInstance() {

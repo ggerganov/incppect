@@ -181,7 +181,26 @@ constexpr auto kIncppect_js = R"js(
 
         get_str: function(path, ...args) {
             var abuf = this.get(path, ...args);
-            return String.fromCharCode.apply(null, new Uint8Array(abuf));
+            //var enc = new TextDecoder("utf-8");
+            //return enc.decode(abuf);
+            var res = String.fromCharCode.apply(null, new Uint8Array(abuf));
+            var output = "";
+            for (var i = 0; i < res.length; i++) {
+                if (res.charCodeAt(i) == 0) break;
+                if (res.charCodeAt(i) <= 127) {
+                    output += res.charAt(i);
+                }
+            }
+            return output;
+        },
+
+        send: function(msg) {
+            var data = new Int8Array(4 + msg.length + 1);
+            var enc = new TextEncoder();
+            data[0] = 4;
+            data.set(enc.encode(msg), 4);
+            data[4 + msg.length] = 0;
+            this.ws.send(data);
         },
 
         send_var_to_id_map: function() {
@@ -194,8 +213,8 @@ constexpr auto kIncppect_js = R"js(
                 msg += keyp + delim + this.var_to_id[key].toString() + delim + nidxs + idxs;
             }
             var data = new Int8Array(4 + msg.length + 1);
-            data[0] = 1;
             var enc = new TextEncoder();
+            data[0] = 1;
             data.set(enc.encode(msg), 4);
             data[4 + msg.length] = 0;
             this.ws.send(data);

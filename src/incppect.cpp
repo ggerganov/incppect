@@ -124,6 +124,7 @@ struct Incppect::Impl {
                                 for (int i = 0; i < nidxs; ++i) {
                                     int idx = 0;
                                     ss >> idx;
+                                    if (idx == -1) idx = sd->clientId;
                                     request.idxs.push_back(idx);
                                 }
 
@@ -303,15 +304,9 @@ struct Incppect::Impl {
 };
 
 Incppect::Incppect() : m_impl(new Impl()) {
-    var("incppect.nclients", [this](const TIdxs & idxs) {
-        static int n = 0;
-        n = m_impl->socketData.size();
-        return view(n);
-    });
-
+    var("incppect.nclients", [this](const TIdxs & idxs) { return view(m_impl->socketData.size()); });
     var("incppect.tx_total", [this](const TIdxs & idxs) { return view(m_impl->txTotal_bytes); });
     var("incppect.rx_total", [this](const TIdxs & idxs) { return view(m_impl->rxTotal_bytes); });
-
     var("incppect.ip_address[%d]", [this](const TIdxs & idxs) {
         auto it = m_impl->clientData.cbegin();
         std::advance(it, idxs[0]);

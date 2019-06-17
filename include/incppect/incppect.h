@@ -64,13 +64,19 @@ class Incppect {
 
         // shorthand for string_view from var
         template <typename T>
-            static std::string_view view(const T & v) {
+            static std::string_view view(T & v) {
+                if constexpr (std::is_same<T, std::string>::value) {
+                    return std::string_view { v.data(), v.size() };
+                }
                 return std::string_view { (char *)(&v), sizeof(v) };
             }
 
-        static std::string_view view(const std::string & v) {
-            return std::string_view { v.data(), v.size() };
-        }
+        template <typename T>
+            static std::string_view view(T && v) {
+                static T t;
+                t = std::move(v);
+                return std::string_view { (char *)(&t), sizeof(t) };
+            }
 
         // get global instance
         static Incppect & getInstance() {

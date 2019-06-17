@@ -199,7 +199,7 @@
             for (var key in this.var_to_id) {
                 var nidxs = 0;
                 var idxs = delim;
-                var keyp = key.replace(/\[\d*\]/g, function(m) { ++nidxs; idxs += m.replace(/[\[\]]/g, '') + delim; return '[%d]'; });
+                var keyp = key.replace(/\[-?\d*\]/g, function(m) { ++nidxs; idxs += m.replace(/[\[\]]/g, '') + delim; return '[%d]'; });
                 msg += keyp + delim + this.var_to_id[key].toString() + delim + nidxs + idxs;
             }
             var data = new Int8Array(4 + msg.length + 1);

@@ -65,12 +65,12 @@
             if (this.requests_regenerate) {
                 this.requests_old = this.requests;
                 this.requests = [];
+            }
 
-                try {
-                    this.render();
-                } catch(err) {
-                    this.onerror('Failed to render state: ' + err);
-                }
+            try {
+                this.render();
+            } catch(err) {
+                this.onerror('Failed to render state: ' + err);
             }
 
             if (this.requests_regenerate) {

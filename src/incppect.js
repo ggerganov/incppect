@@ -8,6 +8,7 @@ var incppect = {
     vars_map: {},
     var_to_id: {},
     id_to_var: {},
+    last_data: null,
 
     // requests data
     requests: [],
@@ -253,23 +254,46 @@ var incppect = {
     },
 
     onmessage: function(evt) {
-        var offset = 0;
+        var type_all = (new Uint32Array(evt.data))[0];
+
+        if (this.last_data != null && type_all == 1) {
+            var ntotal = evt.data.byteLength/4 - 1;
+
+            var src_view = new Uint32Array(evt.data, 4);
+            var dst_view = new Uint32Array(this.last_data, 4);
+
+            var k = 0;
+            for (var i = 0; i < ntotal/2; ++i) {
+                var n = src_view[2*i + 0];
+                var c = src_view[2*i + 1];
+                for (var j = 0; j < n; ++j) {
+                    dst_view[k] = dst_view[k] ^ c;
+                    ++k;
+                }
+            }
+        } else {
+            this.last_data = evt.data;
+        }
+
+        var int_view = new Uint32Array(this.last_data);
+        var offset = 1;
         var offset_new = 0;
-        var int_view = new Int32Array(evt.data);
-        var total_size = evt.data.byteLength;
+        var total_size = this.last_data.byteLength;
         var id = 0;
+        var type = 0;
         var len = 0;
         while (4*offset < total_size) {
-            id = int_view[offset];
+            id = int_view[offset + 0];
             type = int_view[offset + 1];
             len = int_view[offset + 2];
             offset += 3;
             offset_new = offset + len/4;
             if (type == 0) {
-                this.vars_map[this.id_to_var[id]] = evt.data.slice(4*offset, 4*offset_new);
+                this.vars_map[this.id_to_var[id]] = this.last_data.slice(4*offset, 4*offset_new);
             } else {
-                var src_view = new Uint32Array(evt.data, 4*offset);
+                var src_view = new Uint32Array(this.last_data, 4*offset);
                 var dst_view = new Uint32Array(this.vars_map[this.id_to_var[id]]);
+
                 var k = 0;
                 for (var i = 0; i < len/8; ++i) {
                     var n = src_view[2*i + 0];

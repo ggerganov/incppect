@@ -52,6 +52,10 @@ struct Incppect::Impl {
 
         std::vector<int32_t> lastRequests;
         std::map<int32_t, Request> requests;
+
+        std::vector<char> curBuffer;
+        std::vector<char> prevBuffer;
+        std::vector<char> diffBuffer;
     };
 
     struct PerSocketData {
@@ -241,7 +245,15 @@ struct Incppect::Impl {
 
     void update() {
         for (auto & [clientId, cd] : clientData) {
-            std::vector<char> buffer;
+            auto & curBuffer = cd.curBuffer;
+            auto & prevBuffer = cd.prevBuffer;
+            auto & diffBuffer = cd.diffBuffer;
+
+            curBuffer.clear();
+
+            uint32_t typeAll = 0;
+            std::copy((char *)(&typeAll), (char *)(&typeAll) + sizeof(typeAll), std::back_inserter(curBuffer));
+
             for (auto & [requestId, req] : cd.requests) {
                 auto & getter = getters[req.getterId];
                 auto tCur = ::timestamp();
@@ -268,16 +280,16 @@ struct Incppect::Impl {
                         type = 1; // run-length encoding of diff
                     }
 
-                    std::copy((char *)(&requestId), (char *)(&requestId) + sizeof(requestId), std::back_inserter(buffer));
-                    std::copy((char *)(&type), (char *)(&type) + sizeof(type), std::back_inserter(buffer));
+                    std::copy((char *)(&requestId), (char *)(&requestId) + sizeof(requestId), std::back_inserter(curBuffer));
+                    std::copy((char *)(&type), (char *)(&type) + sizeof(type), std::back_inserter(curBuffer));
 
                     if (type == 0) {
-                        std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
-                        std::copy(req.curData.begin(), req.curData.end(), std::back_inserter(buffer));
+                        std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(curBuffer));
+                        std::copy(req.curData.begin(), req.curData.end(), std::back_inserter(curBuffer));
                         {
                             char v = 0;
                             for (int i = 0; i < padding_bytes; ++i) {
-                                std::copy((char *)(&v), (char *)(&v) + sizeof(v), std::back_inserter(buffer));
+                                std::copy((char *)(&v), (char *)(&v) + sizeof(v), std::back_inserter(curBuffer));
                             }
                         }
                     } else if (type == 1) {
@@ -325,8 +337,8 @@ struct Incppect::Impl {
                         std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(req.diffData));
 
                         dataSize_bytes = req.diffData.size();
-                        std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
-                        std::copy(req.diffData.begin(), req.diffData.end(), std::back_inserter(buffer));
+                        std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(curBuffer));
+                        std::copy(req.diffData.begin(), req.diffData.end(), std::back_inserter(curBuffer));
                     }
 
                     req.prevData.resize(req.curData.size());
@@ -338,16 +350,63 @@ struct Incppect::Impl {
                 my_printf("[incppect] update: buffered amount = %d\n", socketData[clientId]->ws->getBufferedAmount());
             }
 
-            if (buffer.size() > 0) {
-                if (buffer.size() > parameters.maxPayloadLength_bytes) {
-                    my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) buffer.size(), parameters.maxPayloadLength_bytes);
+            if (curBuffer.size() > 4) {
+                if (curBuffer.size() == prevBuffer.size() && curBuffer.size() > 256) {
+                    uint32_t a = 0;
+                    uint32_t b = 0;
+                    uint32_t c = 0;
+                    uint32_t n = 0;
+                    diffBuffer.clear();
+
+                    uint32_t typeAll = 1;
+                    std::copy((char *)(&typeAll), (char *)(&typeAll) + sizeof(typeAll), std::back_inserter(diffBuffer));
+
+                    for (int i = 4; i < (int) curBuffer.size(); i += 4) {
+                        std::memcpy((char *)(&a), prevBuffer.data() + i, sizeof(uint32_t));
+                        std::memcpy((char *)(&b), curBuffer.data() + i, sizeof(uint32_t));
+                        a = a ^ b;
+                        if (a == c) {
+                            ++n;
+                        } else {
+                            if (n > 0) {
+                                std::copy((char *)(&n), (char *)(&n) + sizeof(uint32_t), std::back_inserter(diffBuffer));
+                                std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(diffBuffer));
+                            }
+                            n = 1;
+                            c = a;
+                        }
+                    }
+
+                    std::copy((char *)(&n), (char *)(&n) + sizeof(uint32_t), std::back_inserter(diffBuffer));
+                    std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(diffBuffer));
+
+                    if (diffBuffer.size() > parameters.maxPayloadLength_bytes) {
+                        my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) diffBuffer.size(), parameters.maxPayloadLength_bytes);
+                    }
+
+                    // compress only for message larger than 64 bytes
+                    bool doCompress = diffBuffer.size() > 64;
+
+                    if (socketData[clientId]->ws->send({ diffBuffer.data(), diffBuffer.size() }, uWS::OpCode::BINARY, doCompress) == false) {
+                        my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
+                    }
+                } else {
+                    if (curBuffer.size() > parameters.maxPayloadLength_bytes) {
+                        my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) curBuffer.size(), parameters.maxPayloadLength_bytes);
+                    }
+
+                    // compress only for message larger than 64 bytes
+                    bool doCompress = curBuffer.size() > 64;
+
+                    if (socketData[clientId]->ws->send({ curBuffer.data(), curBuffer.size() }, uWS::OpCode::BINARY, doCompress) == false) {
+                        my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
+                    }
                 }
 
-                // compress only for message larger than 64 bytes
-                if (socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY, buffer.size() > 64) == false) {
-                    my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
-                }
-                txTotal_bytes += buffer.size();
+                txTotal_bytes += curBuffer.size();
+
+                prevBuffer.resize(curBuffer.size());
+                std::copy(curBuffer.begin(), curBuffer.end(), prevBuffer.begin());
             }
         }
     }

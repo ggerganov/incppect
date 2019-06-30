@@ -90,7 +90,7 @@ struct Incppect::Impl {
 
                 socketData.insert({ uniqueId, sd });
 
-                my_printf("[incppect] client with id = %d connectd\n", sd->clientId);
+                my_printf("[incppect] client with id = %d connected\n", sd->clientId);
 
                 if (handler) {
                     handler(sd->clientId, Connect, { nullptr, 0 } );
@@ -151,6 +151,7 @@ struct Incppect::Impl {
                                 if (cd.requests.find(curRequest) != cd.requests.end()) {
                                     cd.lastRequests.push_back(curRequest);
                                     cd.requests[curRequest].tLastRequested_ms = ::timestamp();
+                                    cd.requests[curRequest].tLastRequestTimeout_ms = parameters.tLastRequestTimeout_ms;
                                 }
                             }
                         }
@@ -160,6 +161,7 @@ struct Incppect::Impl {
                             for (auto curRequest : cd.lastRequests) {
                                 if (cd.requests.find(curRequest) != cd.requests.end()) {
                                     cd.requests[curRequest].tLastRequested_ms = ::timestamp();
+                                    cd.requests[curRequest].tLastRequestTimeout_ms = parameters.tLastRequestTimeout_ms;
                                 }
                             }
                         }
@@ -230,6 +232,7 @@ struct Incppect::Impl {
 
             res->end(str);
         }).listen(parameters.portListen, [this](auto *token) {
+            this->listenSocket = token;
             if (token) {
                 my_printf("[incppect] listening on port %d\n", parameters.portListen);
             }
@@ -262,27 +265,68 @@ struct Incppect::Impl {
 
                     int32_t type = 0; // full update
                     if (req.prevData.size() == req.curData.size() && req.curData.size() > 256) {
-                        type = 1;
+                        type = 1; // run-length encoding of diff
                     }
 
                     std::copy((char *)(&requestId), (char *)(&requestId) + sizeof(requestId), std::back_inserter(buffer));
                     std::copy((char *)(&type), (char *)(&type) + sizeof(type), std::back_inserter(buffer));
-                    std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
 
                     if (type == 0) {
+                        std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
                         std::copy(req.curData.begin(), req.curData.end(), std::back_inserter(buffer));
+                        {
+                            char v = 0;
+                            for (int i = 0; i < padding_bytes; ++i) {
+                                std::copy((char *)(&v), (char *)(&v) + sizeof(v), std::back_inserter(buffer));
+                            }
+                        }
                     } else if (type == 1) {
-                        req.diffData.resize(req.curData.size());
-                        for (int i = 0; i < (int) req.curData.size(); ++i) {
-                            req.diffData[i] = req.prevData[i] ^ req.curData[i];
+                        uint32_t a = 0;
+                        uint32_t b = 0;
+                        uint32_t c = 0;
+                        uint32_t n = 0;
+                        req.diffData.clear();
+
+                        for (int i = 0; i < (int) req.curData.size(); i += 4) {
+                            std::memcpy((char *)(&a), req.prevData.data() + i, sizeof(uint32_t));
+                            std::memcpy((char *)(&b), req.curData.data() + i, sizeof(uint32_t));
+                            a = a ^ b;
+                            if (a == c) {
+                                ++n;
+                            } else {
+                                if (n > 0) {
+                                    std::copy((char *)(&n), (char *)(&n) + sizeof(uint32_t), std::back_inserter(req.diffData));
+                                    std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(req.diffData));
+                                }
+                                n = 1;
+                                c = a;
+                            }
                         }
+
+                        if (req.curData.size() % 4 != 0) {
+                            a = 0;
+                            b = 0;
+                            uint32_t i = (req.curData.size()/4)*4;
+                            uint32_t k = req.curData.size() - i;
+                            std::memcpy((char *)(&a), req.prevData.data() + i, k);
+                            std::memcpy((char *)(&b), req.curData.data() + i, k);
+                            a = a ^ b;
+                            if (a == c) {
+                                ++n;
+                            } else {
+                                std::copy((char *)(&n), (char *)(&n) + sizeof(uint32_t), std::back_inserter(req.diffData));
+                                std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(req.diffData));
+                                n = 1;
+                                c = a;
+                            }
+                        }
+
+                        std::copy((char *)(&n), (char *)(&n) + sizeof(uint32_t), std::back_inserter(req.diffData));
+                        std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(req.diffData));
+
+                        dataSize_bytes = req.diffData.size();
+                        std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
                         std::copy(req.diffData.begin(), req.diffData.end(), std::back_inserter(buffer));
-                    }
-                    {
-                        char v = 0;
-                        for (int i = 0; i < padding_bytes; ++i) {
-                            std::copy((char *)(&v), (char *)(&v) + sizeof(v), std::back_inserter(buffer));
-                        }
                     }
 
                     req.prevData.resize(req.curData.size());
@@ -317,6 +361,7 @@ struct Incppect::Impl {
     std::vector<TGetter> getters;
 
     uWS::Loop * mainLoop = nullptr;
+    us_listen_socket_t * listenSocket = nullptr;
     std::map<int, PerSocketData *> socketData;
     std::map<int, ClientData> clientData;
 
@@ -339,6 +384,12 @@ Incppect::~Incppect() {}
 void Incppect::run(Parameters parameters) {
     m_impl->parameters = parameters;
     m_impl->run();
+}
+
+void Incppect::stop() {
+    m_impl->mainLoop->defer([this]() {
+        us_listen_socket_close(0, m_impl->listenSocket);
+    });
 }
 
 std::thread Incppect::runAsync(Parameters parameters) {

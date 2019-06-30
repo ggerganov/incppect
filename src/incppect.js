@@ -270,8 +270,14 @@ var incppect = {
             } else {
                 var src_view = new Uint32Array(evt.data, 4*offset);
                 var dst_view = new Uint32Array(this.vars_map[this.id_to_var[id]]);
-                for (var i = 0; i < len/4; ++i) {
-                    dst_view[i] = dst_view[i] ^ src_view[i];
+                var k = 0;
+                for (var i = 0; i < len/8; ++i) {
+                    var n = src_view[2*i + 0];
+                    var c = src_view[2*i + 1];
+                    for (var j = 0; j < n; ++j) {
+                        dst_view[k] = dst_view[k] ^ c;
+                        ++k;
+                    }
                 }
             }
             offset = offset_new;

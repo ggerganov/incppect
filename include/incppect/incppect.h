@@ -29,6 +29,7 @@ class Incppect {
         struct Parameters {
             int32_t portListen = 3000;
             int32_t maxPayloadLength_bytes = 256*1024;
+            int64_t tLastRequestTimeout_ms = 3000;
 
             std::string httpRoot = ".";
 
@@ -44,6 +45,8 @@ class Incppect {
         // run the incppect service main loop in the current thread
         // blocking call
         void run(Parameters parameters);
+
+        void stop();
 
         // run the incppect service main loop in dedicated thread
         // non-blocking call, returns the created std::thread

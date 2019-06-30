@@ -38,7 +38,7 @@ struct Incppect::Impl {
         int64_t tLastRequestTimeout_ms = 3000;
 
         TIdxs idxs;
-        int getterId = -1;
+        int32_t getterId = -1;
 
         std::vector<char> prevData;
         std::string_view curData;
@@ -49,12 +49,12 @@ struct Incppect::Impl {
 
         IpAddress ipAddress;
 
-        std::vector<int> lastRequests;
-        std::map<int, Request> requests;
+        std::vector<int32_t> lastRequests;
+        std::map<int32_t, Request> requests;
     };
 
     struct PerSocketData {
-        int clientId = 0;
+        int32_t clientId = 0;
 
         uWS::Loop * mainLoop = nullptr;
         uWS::WebSocket<false, true> * ws = nullptr;
@@ -70,7 +70,7 @@ struct Incppect::Impl {
             .maxPayloadLength = parameters.maxPayloadLength_bytes,
             .idleTimeout = 120,
             .open = [&](auto *ws, auto *req) {
-                static int uniqueId = 1;
+                static int32_t uniqueId = 1;
                 ++uniqueId;
 
                 auto & cd = clientData[uniqueId];
@@ -280,7 +280,8 @@ struct Incppect::Impl {
                     my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) buffer.size(), parameters.maxPayloadLength_bytes);
                 }
 
-                if (socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY) == false) {
+                // compress only for message larger than 64 bytes
+                if (socketData[clientId]->ws->send({ buffer.data(), buffer.size() }, uWS::OpCode::BINARY, buffer.size() > 64) == false) {
                     my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
                 }
                 txTotal_bytes += buffer.size();

@@ -116,8 +116,12 @@ constexpr auto kIncppect_js = R"js(
             return this.vars_map[path];
         },
 
+        get_abuf: function(path, ...args) {
+            return this.get(path, ...args);
+        },
+
         get_int8: function(path, ...args) {
-            return this.get_int16_arr(path, ...args)[0];
+            return this.get_int8_arr(path, ...args)[0];
         },
 
         get_int8_arr: function(path, ...args) {
@@ -126,7 +130,7 @@ constexpr auto kIncppect_js = R"js(
         },
 
         get_uint8: function(path, ...args) {
-            return this.get_int16_arr(path, ...args)[0];
+            return this.get_uint8_arr(path, ...args)[0];
         },
 
         get_uint8_arr: function(path, ...args) {
@@ -144,7 +148,7 @@ constexpr auto kIncppect_js = R"js(
         },
 
         get_uint16: function(path, ...args) {
-            return this.get_int16_arr(path, ...args)[0];
+            return this.get_uint16_arr(path, ...args)[0];
         },
 
         get_uint16_arr: function(path, ...args) {
@@ -162,7 +166,7 @@ constexpr auto kIncppect_js = R"js(
         },
 
         get_uint32: function(path, ...args) {
-            return this.get_int32_arr(path, ...args)[0];
+            return this.get_uint32_arr(path, ...args)[0];
         },
 
         get_uint32_arr: function(path, ...args) {

@@ -41,6 +41,7 @@ struct Incppect::Impl {
         int32_t getterId = -1;
 
         std::vector<char> prevData;
+        std::vector<char> diffData;
         std::string_view curData;
     };
 
@@ -259,15 +260,33 @@ struct Incppect::Impl {
                         }
                     }
 
+                    int32_t type = 0; // full update
+                    if (req.prevData.size() == req.curData.size() && req.curData.size() > 256) {
+                        type = 1;
+                    }
+
                     std::copy((char *)(&requestId), (char *)(&requestId) + sizeof(requestId), std::back_inserter(buffer));
+                    std::copy((char *)(&type), (char *)(&type) + sizeof(type), std::back_inserter(buffer));
                     std::copy((char *)(&dataSize_bytes), (char *)(&dataSize_bytes) + sizeof(dataSize_bytes), std::back_inserter(buffer));
-                    std::copy(req.curData.begin(), req.curData.end(), std::back_inserter(buffer));
+
+                    if (type == 0) {
+                        std::copy(req.curData.begin(), req.curData.end(), std::back_inserter(buffer));
+                    } else if (type == 1) {
+                        req.diffData.resize(req.curData.size());
+                        for (int i = 0; i < (int) req.curData.size(); ++i) {
+                            req.diffData[i] = req.prevData[i] ^ req.curData[i];
+                        }
+                        std::copy(req.diffData.begin(), req.diffData.end(), std::back_inserter(buffer));
+                    }
                     {
                         char v = 0;
                         for (int i = 0; i < padding_bytes; ++i) {
                             std::copy((char *)(&v), (char *)(&v) + sizeof(v), std::back_inserter(buffer));
                         }
                     }
+
+                    req.prevData.resize(req.curData.size());
+                    std::copy(req.curData.begin(), req.curData.end(), req.prevData.begin());
                 }
             }
 

@@ -261,10 +261,19 @@ var incppect = {
         var len = 0;
         while (4*offset < total_size) {
             id = int_view[offset];
-            len = int_view[offset + 1];
-            offset += 2;
+            type = int_view[offset + 1];
+            len = int_view[offset + 2];
+            offset += 3;
             offset_new = offset + len/4;
-            this.vars_map[this.id_to_var[id]] = evt.data.slice(4*offset, 4*offset_new);
+            if (type == 0) {
+                this.vars_map[this.id_to_var[id]] = evt.data.slice(4*offset, 4*offset_new);
+            } else {
+                var src_view = new Uint32Array(evt.data, 4*offset);
+                var dst_view = new Uint32Array(this.vars_map[this.id_to_var[id]]);
+                for (var i = 0; i < len/4; ++i) {
+                    dst_view[i] = dst_view[i] ^ src_view[i];
+                }
+            }
             offset = offset_new;
         }
     },

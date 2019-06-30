@@ -97,7 +97,7 @@ struct Incppect::Impl {
                 my_printf("[incppect] client with id = %d connected\n", sd->clientId);
 
                 if (handler) {
-                    handler(sd->clientId, Connect, { nullptr, 0 } );
+                    handler(sd->clientId, Connect, { (const char *) cd.ipAddress, 4 } );
                 }
             },
             .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {

@@ -54,6 +54,9 @@ class Incppect {
         // set a resource. useful for serving html/js files from within the application
         void setResource(const TUrl & url, const TResourceContent & content);
 
+        // number of connected clients
+        int32_t nConnected() const;
+
         // run the incppect service main loop in dedicated thread
         // non-blocking call, returns the created std::thread
         std::thread runAsync(Parameters parameters);

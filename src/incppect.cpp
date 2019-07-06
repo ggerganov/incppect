@@ -458,6 +458,10 @@ void Incppect::stop() {
     });
 }
 
+int32_t Incppect::nConnected() const {
+    return m_impl->socketData.size();
+}
+
 void Incppect::setResource(const TUrl & url, const TResourceContent & content) {
     m_impl->resources[url] = content;
 }

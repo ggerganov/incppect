@@ -250,6 +250,11 @@ struct Incppect::Impl {
 
     void update() {
         for (auto & [clientId, cd] : clientData) {
+            if (socketData[clientId]->ws->getBufferedAmount()) {
+                my_printf("[incppect] warning: buffered amount = %d, not sending updates to client %d. waiting for buffer to drain\n", socketData[clientId]->ws->getBufferedAmount(), clientId);
+                continue;
+            }
+
             auto & curBuffer = cd.curBuffer;
             auto & prevBuffer = cd.prevBuffer;
             auto & diffBuffer = cd.diffBuffer;
@@ -351,10 +356,6 @@ struct Incppect::Impl {
                 }
             }
 
-            if (socketData[clientId]->ws->getBufferedAmount()) {
-                my_printf("[incppect] update: buffered amount = %d\n", socketData[clientId]->ws->getBufferedAmount());
-            }
-
             if (curBuffer.size() > 4) {
                 if (curBuffer.size() == prevBuffer.size() && curBuffer.size() > 256) {
                     uint32_t a = 0;
@@ -393,7 +394,7 @@ struct Incppect::Impl {
                     bool doCompress = diffBuffer.size() > 64;
 
                     if (socketData[clientId]->ws->send({ diffBuffer.data(), diffBuffer.size() }, uWS::OpCode::BINARY, doCompress) == false) {
-                        my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
+                        my_printf("[incpeect] warning: backpressure for client %d increased \n", clientId);
                     }
                 } else {
                     if (curBuffer.size() > parameters.maxPayloadLength_bytes) {
@@ -404,7 +405,7 @@ struct Incppect::Impl {
                     bool doCompress = curBuffer.size() > 64;
 
                     if (socketData[clientId]->ws->send({ curBuffer.data(), curBuffer.size() }, uWS::OpCode::BINARY, doCompress) == false) {
-                        my_printf("[incpeect] error: failed to send data to client %d\n", clientId);
+                        my_printf("[incpeect] warning: backpressure for client %d increased \n", clientId);
                     }
                 }
 

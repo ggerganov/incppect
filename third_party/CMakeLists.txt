@@ -1,19 +1,19 @@
 if (APPLE)
     add_library(uWS SHARED
-        uSockets/src/context.c
-        uSockets/src/loop.c
-        uSockets/src/socket.c
-        uSockets/src/ssl.c
-        uSockets/src/eventing/libuv.c
+        uWebSockets/uSockets/src/context.c
+        uWebSockets/uSockets/src/loop.c
+        uWebSockets/uSockets/src/socket.c
+        uWebSockets/uSockets/src/ssl.c
+        uWebSockets/uSockets/src/eventing/libuv.c
         )
 
     target_include_directories(uWS PRIVATE
-        uSockets/src
+        uWebSockets/uSockets/src
         ${LIBUV_INCLUDE_DIR}
         )
 
     target_include_directories(uWS INTERFACE
-        uSockets/src
+        uWebSockets/uSockets/src
         uWebSockets/src
         )
 
@@ -30,19 +30,19 @@ elseif (WIN32)
     message(FATAL_ERROR "Windows build not yet supported")
 else ()
     add_library(uWS SHARED
-        uSockets/src/context.c
-        uSockets/src/loop.c
-        uSockets/src/socket.c
-        uSockets/src/ssl.c
-        uSockets/src/eventing/epoll.c
+        uWebSockets/uSockets/src/context.c
+        uWebSockets/uSockets/src/loop.c
+        uWebSockets/uSockets/src/socket.c
+        uWebSockets/uSockets/src/ssl.c
+        uWebSockets/uSockets/src/eventing/epoll.c
         )
 
     target_include_directories(uWS PRIVATE
-        uSockets/src
+        uWebSockets/uSockets/src
         )
 
     target_include_directories(uWS INTERFACE
-        uSockets/src
+        uWebSockets/uSockets/src
         uWebSockets/src
         )
 

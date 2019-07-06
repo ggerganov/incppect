@@ -20,6 +20,8 @@ class Incppect {
             Custom,
         };
 
+        using TUrl = std::string;
+        using TResourceContent = std::string;
         using TPath = std::string;
         using TIdxs = std::vector<int>;
         using TGetter = std::function<std::string_view(const TIdxs & idxs)>;
@@ -46,7 +48,11 @@ class Incppect {
         // blocking call
         void run(Parameters parameters);
 
+        // terminate the server instance
         void stop();
+
+        // set a resource. useful for serving html/js files from within the application
+        void setResource(const TUrl & url, const TResourceContent & content);
 
         // run the incppect service main loop in dedicated thread
         // non-blocking call, returns the created std::thread

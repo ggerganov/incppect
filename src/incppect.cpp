@@ -219,6 +219,11 @@ struct Incppect::Impl {
                 url += "index.html";
             }
 
+            if (resources.find(url) != resources.end()) {
+                res->end(resources[url]);
+                return;
+            }
+
             std::ifstream fin(parameters.httpRoot + url);
 
             if (fin.is_open() == false || fin.good() == false) {
@@ -424,6 +429,8 @@ struct Incppect::Impl {
     std::map<int, PerSocketData *> socketData;
     std::map<int, ClientData> clientData;
 
+    std::map<TUrl, TResourceContent> resources;
+
     THandler handler = nullptr;
 };
 
@@ -449,6 +456,10 @@ void Incppect::stop() {
     m_impl->mainLoop->defer([this]() {
         us_listen_socket_close(0, m_impl->listenSocket);
     });
+}
+
+void Incppect::setResource(const TUrl & url, const TResourceContent & content) {
+    m_impl->resources[url] = content;
 }
 
 std::thread Incppect::runAsync(Parameters parameters) {

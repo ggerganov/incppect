@@ -108,8 +108,10 @@ struct Incppect::Impl {
 
                 int * p = (int *) message.data();
                 int type = p[0];
-                auto sd = (PerSocketData *) ws->getUserData();
 
+                bool doUpdate = true;
+
+                auto sd = (PerSocketData *) ws->getUserData();
                 auto & cd = clientData[sd->clientId];
 
                 switch (type) {
@@ -172,6 +174,7 @@ struct Incppect::Impl {
                         break;
                     case 4:
                         {
+                            doUpdate = false;
                             if (handler && message.size() > sizeof(int)) {
                                 handler(sd->clientId, Custom, { message.data() + sizeof(int), message.size() - sizeof(int) } );
                             }
@@ -180,7 +183,10 @@ struct Incppect::Impl {
                     default:
                         my_printf("[incppect] unknown message type: %d\n", type);
                 };
-                sd->mainLoop->defer([this]() { this->update(); });
+
+                if (doUpdate) {
+                    sd->mainLoop->defer([this]() { this->update(); });
+                }
             },
             .drain = [](auto *ws) {
                 /* Check getBufferedAmount here */
@@ -267,8 +273,12 @@ struct Incppect::Impl {
             for (auto & [requestId, req] : cd.requests) {
                 auto & getter = getters[req.getterId];
                 auto tCur = ::timestamp();
-                if (tCur - req.tLastRequested_ms < req.tLastRequestTimeout_ms &&
+                if (((req.tLastRequestTimeout_ms < 0 && req.tLastRequested_ms > 0) || (tCur - req.tLastRequested_ms < req.tLastRequestTimeout_ms)) &&
                     tCur - req.tLastUpdated_ms > req.tMinUpdate_ms) {
+                    if (req.tLastRequestTimeout_ms < 0) {
+                        req.tLastRequested_ms = 0;
+                    }
+
                     req.curData = getter(req.idxs);
                     req.tLastUpdated_ms = tCur;
 

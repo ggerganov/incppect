@@ -106,8 +106,8 @@ struct Incppect::Impl {
                     return;
                 }
 
-                int * p = (int *) message.data();
-                int type = p[0];
+                int32_t type = -1;
+                std::memcpy((char *)(&type), message.data(), sizeof(type));
 
                 bool doUpdate = true;
 
@@ -148,12 +148,17 @@ struct Incppect::Impl {
                         break;
                     case 2:
                         {
-                            int nRequests = (message.size() - sizeof(int))/sizeof(int);
+                            int nRequests = (message.size() - sizeof(int32_t))/sizeof(int32_t);
+                            if (nRequests*sizeof(int32_t) + sizeof(int32_t) != message.size()) {
+                                my_printf("[incppect] error : invalid message data!\n");
+                                return;
+                            }
                             my_printf("[incppect] received requests: %d\n", nRequests);
 
                             cd.lastRequests.clear();
                             for (int i = 0; i < nRequests; ++i) {
-                                int curRequest = p[i + 1];
+                                int32_t curRequest = -1;
+                                std::memcpy((char *)(&curRequest), message.data() + 4*(i + 1), sizeof(curRequest));
                                 if (cd.requests.find(curRequest) != cd.requests.end()) {
                                     cd.lastRequests.push_back(curRequest);
                                     cd.requests[curRequest].tLastRequested_ms = ::timestamp();
@@ -175,8 +180,8 @@ struct Incppect::Impl {
                     case 4:
                         {
                             doUpdate = false;
-                            if (handler && message.size() > sizeof(int)) {
-                                handler(sd->clientId, Custom, { message.data() + sizeof(int), message.size() - sizeof(int) } );
+                            if (handler && message.size() > sizeof(int32_t)) {
+                                handler(sd->clientId, Custom, { message.data() + sizeof(int32_t), message.size() - sizeof(int32_t) } );
                             }
                         }
                         break;

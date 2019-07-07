@@ -74,7 +74,7 @@ struct Incppect::Impl {
             .compression = uWS::SHARED_COMPRESSOR,
             .maxPayloadLength = parameters.maxPayloadLength_bytes,
             .idleTimeout = 120,
-            .open = [&](auto *ws, auto *req) {
+            .open = [&](auto * ws, auto * /*req*/) {
                 static int32_t uniqueId = 1;
                 ++uniqueId;
 
@@ -100,7 +100,7 @@ struct Incppect::Impl {
                     handler(sd->clientId, Connect, { (const char *) cd.ipAddress, 4 } );
                 }
             },
-            .message = [this](auto *ws, std::string_view message, uWS::OpCode opCode) {
+            .message = [this](auto * ws, std::string_view message, uWS::OpCode /*opCode*/) {
                 rxTotal_bytes += message.size();
                 if (message.size() < sizeof(int)) {
                     return;
@@ -199,13 +199,13 @@ struct Incppect::Impl {
                     my_printf("[incppect] drain: buffered amount = %d\n", ws->getBufferedAmount());
                 }
             },
-            .ping = [](auto *ws) {
+            .ping = [](auto * /*ws*/) {
 
             },
-            .pong = [](auto *ws) {
+            .pong = [](auto * /*ws*/) {
 
             },
-            .close = [&](auto *ws, int code, std::string_view message) {
+            .close = [this](auto * ws, int /*code*/, std::string_view /*message*/) {
                 auto sd = (PerSocketData *) ws->getUserData();
                 my_printf("[incppect] client with id = %d disconnected\n", sd->clientId);
 
@@ -216,7 +216,7 @@ struct Incppect::Impl {
                     handler(sd->clientId, Disconnect, { nullptr, 0 } );
                 }
             }
-        }).get("/incppect.js", [this](auto *res, auto *req) {
+        }).get("/incppect.js", [](auto *res, auto * /*req*/) {
             res->end(kIncppect_js);
         }).get("/*", [this](auto *res, auto *req) {
             std::string url = std::string(req->getUrl());
@@ -401,7 +401,7 @@ struct Incppect::Impl {
                     std::copy((char *)(&n), (char *)(&n) + sizeof(uint32_t), std::back_inserter(diffBuffer));
                     std::copy((char *)(&c), (char *)(&c) + sizeof(uint32_t), std::back_inserter(diffBuffer));
 
-                    if (diffBuffer.size() > parameters.maxPayloadLength_bytes) {
+                    if ((int32_t) diffBuffer.size() > parameters.maxPayloadLength_bytes) {
                         my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) diffBuffer.size(), parameters.maxPayloadLength_bytes);
                     }
 
@@ -412,7 +412,7 @@ struct Incppect::Impl {
                         my_printf("[incpeect] warning: backpressure for client %d increased \n", clientId);
                     }
                 } else {
-                    if (curBuffer.size() > parameters.maxPayloadLength_bytes) {
+                    if ((int32_t) curBuffer.size() > parameters.maxPayloadLength_bytes) {
                         my_printf("[incppect] warning: buffer size (%d) exceeds maxPayloadLength (%d)\n", (int) curBuffer.size(), parameters.maxPayloadLength_bytes);
                     }
 
@@ -451,9 +451,9 @@ struct Incppect::Impl {
 };
 
 Incppect::Incppect() : m_impl(new Impl()) {
-    var("incppect.nclients", [this](const TIdxs & idxs) { return view(m_impl->socketData.size()); });
-    var("incppect.tx_total", [this](const TIdxs & idxs) { return view(m_impl->txTotal_bytes); });
-    var("incppect.rx_total", [this](const TIdxs & idxs) { return view(m_impl->rxTotal_bytes); });
+    var("incppect.nclients", [this](const TIdxs & ) { return view(m_impl->socketData.size()); });
+    var("incppect.tx_total", [this](const TIdxs & ) { return view(m_impl->txTotal_bytes); });
+    var("incppect.rx_total", [this](const TIdxs & ) { return view(m_impl->rxTotal_bytes); });
     var("incppect.ip_address[%d]", [this](const TIdxs & idxs) {
         auto it = m_impl->clientData.cbegin();
         std::advance(it, idxs[0]);

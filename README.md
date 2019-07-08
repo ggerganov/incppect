@@ -22,7 +22,7 @@ Checkout the [examples](https://github.com/ggerganov/incppect/tree/master/exampl
 
 In your C++ program add something along these lines:
 
-```
+```cpp
 #include "incppect/incppect.h"
 
 // start the web server in a dedicated thread
@@ -40,7 +40,7 @@ incppect.var("path1[%d]", [&](auto idxs) { return Incppect::view(some_arr[idxs[0
 
 In your web client:
 
-```
+```js
 <script src="incppect.js"></script>
 
 <script>
@@ -62,9 +62,11 @@ In your web client:
 
 **Linux and Mac OS**
 
-    git clone https://github.com/ggerganov/incppect
-    cd incppect
-    git submodule update --init
-    mkdir build && cd build
-    cmake ..
-    make
+```bash
+git clone https://github.com/ggerganov/incppect
+cd incppect
+git submodule update --init
+mkdir build && cd build
+cmake ..
+make
+```

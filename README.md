@@ -12,11 +12,15 @@ Incppect starts a simple HTTP/WebSocket server in your application that accepts 
 
 The HTTP/WebSocket server is implemented via the [uWebSocket](https://github.com/uNetworking/uWebSockets) library (included in the project as a submodule).
 
-## Example:
+## Examples:
 
 <a href="https://i.imgur.com/8hJSbzQ.gif" target="_blank">![incppect-balls2d](https://i.imgur.com/8hJSbzQ.gif)</a>
 
 Checkout the [examples](https://github.com/ggerganov/incppect/tree/master/examples) folder for more samples.
+
+Other projects:
+- [imgui-ws](https://github.com/ggerganov/imgui-ws) - Dear ImGui over WebSockets
+- [typing-battles](https://github.com/ggerganov/typing-battles) - A multiplayer typing game
 
 ## Sample usage:
 

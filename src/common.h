@@ -184,6 +184,15 @@ var incppect = {
         return new Float32Array(abuf);
     },
 
+    get_double: function(path, ...args) {
+        return this.get_double_arr(path, ...args)[0];
+    },
+
+    get_double_arr: function(path, ...args) {
+        var abuf = this.get(path, ...args);
+        return new Float64Array(abuf);
+    },
+
     get_str: function(path, ...args) {
         var abuf = this.get(path, ...args);
         //var enc = new TextDecoder("utf-8");

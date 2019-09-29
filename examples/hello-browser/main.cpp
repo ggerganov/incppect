@@ -22,6 +22,7 @@ int main(int argc, char ** argv) {
     int32_t var_int32 = 3;
     int32_t var_arr32[4] = { 4, 5, 6, 7 };
     float   var_float = 8.0f;
+    double  var_double = 16.0f;
 
     const char * var_str = "hello browser";
 
@@ -31,6 +32,7 @@ int main(int argc, char ** argv) {
     Incppect::getInstance().var("var_int32_arr", [&](auto) { return Incppect::view(var_arr32); });
     Incppect::getInstance().var("var_int32_arr[%d]", [&](auto idxs) { return Incppect::view(var_arr32[idxs[0]]); });
     Incppect::getInstance().var("var_float", [&](auto idxs) { return Incppect::view(var_float); });
+    Incppect::getInstance().var("var_double", [&](auto idxs) { return Incppect::view(var_double); });
     Incppect::getInstance().var("var_str", [&](auto idxs) { return var_str; });
 
     while (true) {

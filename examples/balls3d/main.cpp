@@ -176,11 +176,11 @@ int main(int argc, char ** argv) {
     State state;
     state.init(nBalls);
 
-    Incppect::getInstance().runAsync(Incppect::Parameters {
-        .portListen = port,
-        .maxPayloadLength_bytes = 256*1024,
-        .httpRoot = httpRoot + "/balls3d",
-    }).detach();
+    Incppect::Parameters parameters;
+    parameters.portListen = port;
+    parameters.maxPayloadLength_bytes = 256*1024;
+    parameters.httpRoot = httpRoot + "/balls3d";
+    Incppect::getInstance().runAsync(parameters).detach();
 
     float checkpoint = 0.0f;
     while (true) {

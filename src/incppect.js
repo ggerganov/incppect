@@ -185,9 +185,8 @@ var incppect = {
 
     get_str: function(path, ...args) {
         var abuf = this.get(path, ...args);
-        //var enc = new TextDecoder("utf-8");
-        //return enc.decode(abuf);
-        var res = String.fromCharCode.apply(null, new Uint8Array(abuf));
+        var enc = new TextDecoder("utf-8");
+        var res = enc.decode(new Uint8Array(abuf));
         var output = "";
         for (var i = 0; i < res.length; i++) {
             if (res.charCodeAt(i) == 0) break;

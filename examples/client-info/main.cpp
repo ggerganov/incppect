@@ -11,11 +11,11 @@ int main(int argc, char ** argv) {
     int port = argc > 1 ? atoi(argv[1]) : 3000;
     std::string httpRoot = argc > 2 ? argv[2] : "../examples";
 
-    Incppect::getInstance().runAsync(Incppect::Parameters {
-        .portListen = port,
-        .maxPayloadLength_bytes = 256*1024,
-        .httpRoot = httpRoot + "/client-info",
-    }).detach();
+    Incppect::Parameters parameters;
+    parameters.portListen = port;
+    parameters.maxPayloadLength_bytes = 256*1024;
+    parameters.httpRoot = httpRoot + "/client-info";
+    Incppect::getInstance().runAsync(parameters).detach();
 
     int8_t  var_int8  = 1;
     int16_t var_int16 = 2;

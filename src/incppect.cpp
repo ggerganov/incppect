@@ -301,7 +301,7 @@ struct Incppect::Impl {
                     }
 
                     int32_t type = 0; // full update
-                    if (req.prevData.size() == req.curData.size() && req.curData.size() > 256) {
+                    if (req.prevData.size() == req.curData.size() + padding_bytes && req.curData.size() > 256) {
                         type = 1; // run-length encoding of diff
                     }
 

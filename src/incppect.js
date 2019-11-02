@@ -23,6 +23,7 @@ var incppect = {
 
     // constants
     k_var_delim: ' ',
+    k_auto_reconnect: true,
     k_requests_update_freq_ms: 50,
 
     timestamp: function() {
@@ -51,7 +52,9 @@ var incppect = {
 
     loop: function() {
         if (this.ws == null) {
-            setTimeout(this.init.bind(this), 1000);
+            if (this.k_auto_reconnect) {
+                setTimeout(this.init.bind(this), 1000);
+            }
             return;
         }
 

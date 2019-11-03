@@ -1,7 +1,7 @@
 var incppect = {
     // websocket data
     ws: null,
-    ws_uri: 'ws://' + window.location.hostname + ':' + window.location.port + '/incppect',
+    ws_uri: 'wss://' + window.location.hostname + ':' + window.location.port + '/incppect',
 
     // vars data
     nvars: 0,

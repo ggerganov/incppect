@@ -29,6 +29,7 @@ before_install:
       brew update;
 
       brew install libuv;
+      brew install openssl;
     fi
 
 script:

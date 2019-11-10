@@ -26,10 +26,10 @@ if (APPLE)
 
     target_link_libraries(uWS PRIVATE
         ${LIBUV_LIBRARIES}
-        ${OPENSSL_SSL_LIBRARY}
         )
 
     target_link_libraries(uWS PUBLIC
+        ${OPENSSL_LIBRARIES}
         ${ZLIB_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT}
         )

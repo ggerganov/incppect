@@ -53,11 +53,8 @@ else ()
         uWebSockets/src
         )
 
-    target_link_libraries(uWS PRIVATE
-        ${OPENSSL_SSL_LIBRARY}
-        )
-
     target_link_libraries(uWS PUBLIC
+        ${OPENSSL_LIBRARIES}
         ${ZLIB_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT}
         )

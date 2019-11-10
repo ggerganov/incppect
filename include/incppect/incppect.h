@@ -12,6 +12,7 @@
 #include <thread>
 #include <vector>
 
+template <bool SSL>
 class Incppect {
     public:
         enum EventType {
@@ -32,8 +33,12 @@ class Incppect {
             int32_t portListen = 3000;
             int32_t maxPayloadLength_bytes = 256*1024;
             int64_t tLastRequestTimeout_ms = 3000;
+            int32_t tIdleTimeout_s = 120;
 
             std::string httpRoot = ".";
+
+            std::string sslKey = "key.pem";
+            std::string sslCert = "cert.pem";
 
             // todo:
             // max clients

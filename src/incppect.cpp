@@ -28,7 +28,8 @@ namespace {
     }
 }
 
-struct Incppect::Impl {
+template <bool SSL>
+struct Incppect<SSL>::Impl {
     using IpAddress = uint8_t[4];
 
     struct Request {
@@ -62,7 +63,7 @@ struct Incppect::Impl {
         int32_t clientId = 0;
 
         uWS::Loop * mainLoop = nullptr;
-        uWS::WebSocket<true, true> * ws = nullptr;
+        uWS::WebSocket<SSL, true> * ws = nullptr;
     };
 
     void run() {
@@ -70,14 +71,10 @@ struct Incppect::Impl {
 
         my_printf("[incppect] running instance. serving HTTP from '%s'\n", parameters.httpRoot.c_str());
 
-        us_socket_context_options_t ssl_options = {};
-        ssl_options.key_file_name = "key.pem";
-        ssl_options.cert_file_name = "cert.pem";
-
-        uWS::TemplatedApp<true>::WebSocketBehavior wsBehaviour;
+        typename uWS::TemplatedApp<SSL>::WebSocketBehavior wsBehaviour;
         wsBehaviour.compression = uWS::SHARED_COMPRESSOR;
         wsBehaviour.maxPayloadLength = parameters.maxPayloadLength_bytes;
-        wsBehaviour.idleTimeout = 120;
+        wsBehaviour.idleTimeout = parameters.tIdleTimeout_s;
         wsBehaviour.open = [&](auto * ws, auto * /*req*/) {
             static int32_t uniqueId = 1;
             ++uniqueId;
@@ -221,9 +218,22 @@ struct Incppect::Impl {
             }
         };
 
-        uWS::SSLApp(ssl_options).ws<PerSocketData>("/incppect", std::move(wsBehaviour)
+        std::unique_ptr<uWS::TemplatedApp<SSL>> app;
+
+        if constexpr (SSL) {
+            us_socket_context_options_t ssl_options = {};
+
+            ssl_options.key_file_name = parameters.sslKey.data();
+            ssl_options.cert_file_name = parameters.sslCert.data();
+
+            app.reset(new uWS::TemplatedApp<SSL>(ssl_options));
+        } else {
+            app.reset(new uWS::TemplatedApp<SSL>());
+        }
+
+        (*app).template ws<PerSocketData>("/incppect", std::move(wsBehaviour)
         ).get("/incppect.js", [](auto *res, auto * /*req*/) {
-            res->end(kIncppect_js);
+                res->end(kIncppect_js);
         }).get("/*", [this](auto *res, auto *req) {
             std::string url = std::string(req->getUrl());
 
@@ -456,7 +466,8 @@ struct Incppect::Impl {
     THandler handler = nullptr;
 };
 
-Incppect::Incppect() : m_impl(new Impl()) {
+template <bool SSL>
+Incppect<SSL>::Incppect() : m_impl(new Impl()) {
     var("incppect.nclients", [this](const TIdxs & ) { return view(m_impl->socketData.size()); });
     var("incppect.tx_total", [this](const TIdxs & ) { return view(m_impl->txTotal_bytes); });
     var("incppect.rx_total", [this](const TIdxs & ) { return view(m_impl->rxTotal_bytes); });
@@ -467,39 +478,50 @@ Incppect::Incppect() : m_impl(new Impl()) {
     });
 }
 
-Incppect::~Incppect() {}
+template <bool SSL>
+Incppect<SSL>::~Incppect() {}
 
-void Incppect::run(Parameters parameters) {
+template <bool SSL>
+void Incppect<SSL>::run(Parameters parameters) {
     m_impl->parameters = parameters;
     m_impl->run();
 }
 
-void Incppect::stop() {
+template <bool SSL>
+void Incppect<SSL>::stop() {
     m_impl->mainLoop->defer([this]() {
         us_listen_socket_close(0, m_impl->listenSocket);
     });
 }
 
-int32_t Incppect::nConnected() const {
+template <bool SSL>
+int32_t Incppect<SSL>::nConnected() const {
     return m_impl->socketData.size();
 }
 
-void Incppect::setResource(const TUrl & url, const TResourceContent & content) {
+template <bool SSL>
+void Incppect<SSL>::setResource(const TUrl & url, const TResourceContent & content) {
     m_impl->resources[url] = content;
 }
 
-std::thread Incppect::runAsync(Parameters parameters) {
+template <bool SSL>
+std::thread Incppect<SSL>::runAsync(Parameters parameters) {
     std::thread worker([this, parameters]() { this->run(parameters); });
     return worker;
 }
 
-bool Incppect::var(const TPath & path, TGetter && getter) {
+template <bool SSL>
+bool Incppect<SSL>::var(const TPath & path, TGetter && getter) {
     m_impl->pathToGetter[path] = m_impl->getters.size();
     m_impl->getters.emplace_back(std::move(getter));
 
     return true;
 }
 
-void Incppect::handler(THandler && handler) {
+template <bool SSL>
+void Incppect<SSL>::handler(THandler && handler) {
     m_impl->handler = std::move(handler);
 }
+
+template class Incppect<false>;
+template class Incppect<true>;

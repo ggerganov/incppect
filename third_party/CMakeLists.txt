@@ -1,7 +1,3 @@
-if (APPLE)
-    set(OPENSSL_ROOT_DIR /usr/local/opt/openssl)
-endif()
-
 find_package(OpenSSL REQUIRED)
 
 if (APPLE)

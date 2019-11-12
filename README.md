@@ -24,6 +24,8 @@ Other projects:
 
 ## Sample usage (HTTP):
 
+Example: [hello-browser](https://github.com/ggerganov/incppect/tree/master/examples/hello-browser)
+
 In your C++ program add something along these lines:
 
 ```cpp
@@ -56,6 +58,56 @@ In your web client:
         // do something with it
         ...
     }
+    
+    incppect.init();
+</script>
+
+```
+
+## Sample usage (HTTPS):
+
+Example: [hello-browser-ssl](https://github.com/ggerganov/incppect/tree/master/examples/hello-browser-ssl)
+
+In your C++ program add something along these lines:
+
+```cpp
+#include "incppect/incppect.h"
+
+// start the web server in a dedicated thread
+auto & incppect = Incppect<true>::getInstance();
+
+incppect::Parameters parameters;
+parameters.sslKey = "key.pem";
+parameters.sslCert = "cert.pem";
+
+incppect.runAsync(parameters);
+
+int32_t some_var;
+float some_arr[10];
+    
+// define variables that can be requested from the web clients
+incppect.var("path0", [&](auto ) { return Incppect<true>::view(some_var); });
+incppect.var("path1[%d]", [&](auto idxs) { return Incppect<true>::view(some_arr[idxs[0]]); });
+
+```
+
+In your web client:
+
+```js
+<script src="incppect.js"></script>
+
+<script>
+    incppect.render = function() {
+        // request C++ data
+        var some_var = this.get_int32('path0');
+        var some_arr_element = this.get_int32_arr('path1[%d]', 5);
+        
+        // do something with it
+        ...
+    }
+    
+    // notice we use secure web-socket
+    incppect.ws_uri = 'wss://' + window.location.hostname + ':' + window.location.port + '/incppect';
     
     incppect.init();
 </script>

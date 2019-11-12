@@ -8,9 +8,9 @@ Inspect C++ memory in the browser
 
 This is a small library that allows a C++ native application to stream memory bits to one or more websocket clients. This functionality can be used to conveniently inspect the internal state of the native application from a browser.
 
-Incppect starts a simple HTTP/WebSocket server in your application that accepts external connections. When a client connects, incppect serves the static content (HTML/JS) from a user-specified location, as well as the built-in incppect JS client [incppect.js](https://github.com/ggerganov/incppect/blob/master/src/incppect.js). The client opens a websocket connection back to the application and starts requesting custom data. The data is streamed back to the client over the websocket. The usage/visualization of the received data is entirely up to the client.
+Incppect starts a simple HTTP(S)/WebSocket server in your application that accepts external connections. When a client connects, incppect serves the static content (HTML/JS) from a user-specified location, as well as the built-in incppect JS client [incppect.js](https://github.com/ggerganov/incppect/blob/master/src/incppect.js). The client opens a websocket connection back to the application and starts requesting custom data. The data is streamed back to the client over the websocket. The usage/visualization of the received data is entirely up to the client.
 
-The HTTP/WebSocket server is implemented via the [uWebSocket](https://github.com/uNetworking/uWebSockets) library (included in the project as a submodule).
+The HTTP(S)/WebSocket server is implemented via the [uWebSocket](https://github.com/uNetworking/uWebSockets) library (included in the project as a submodule).
 
 ## Examples:
 
@@ -22,7 +22,7 @@ Other projects:
 - [imgui-ws](https://github.com/ggerganov/imgui-ws) - Dear ImGui over WebSockets
 - [typing-battles](https://github.com/ggerganov/typing-battles) - A multiplayer typing game
 
-## Sample usage:
+## Sample usage (HTTP):
 
 In your C++ program add something along these lines:
 
@@ -30,15 +30,15 @@ In your C++ program add something along these lines:
 #include "incppect/incppect.h"
 
 // start the web server in a dedicated thread
-auto & incppect = Incppect::getInstance();
+auto & incppect = Incppect<false>::getInstance();
 incppect.runAsync(...);
 
 int32_t some_var;
 float some_arr[10];
     
 // define variables that can be requested from the web clients
-incppect.var("path0", [&](auto ) { return Incppect::view(some_var); });
-incppect.var("path1[%d]", [&](auto idxs) { return Incppect::view(some_arr[idxs[0]]); });
+incppect.var("path0", [&](auto ) { return Incppect<false>::view(some_var); });
+incppect.var("path1[%d]", [&](auto idxs) { return Incppect<false>::view(some_arr[idxs[0]]); });
 
 ```
 

@@ -76,6 +76,7 @@ In your C++ program add something along these lines:
 // start the web server in a dedicated thread
 auto & incppect = Incppect<true>::getInstance();
 
+// provide valid SSL certificate
 incppect::Parameters parameters;
 parameters.sslKey = "key.pem";
 parameters.sslCert = "cert.pem";

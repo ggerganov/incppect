@@ -5,17 +5,19 @@
 
 #include "incppect/incppect.h"
 
+using incppect = Incppect<false>;
+
 int main(int argc, char ** argv) {
 	printf("Usage: %s [port] [httpRoot]\n", argv[0]);
 
     int port = argc > 1 ? atoi(argv[1]) : 3000;
     std::string httpRoot = argc > 2 ? argv[2] : "../examples";
 
-    Incppect::Parameters parameters;
+    incppect::Parameters parameters;
     parameters.portListen = port;
     parameters.maxPayloadLength_bytes = 256*1024;
     parameters.httpRoot = httpRoot + "/hello-browser";
-    Incppect::getInstance().runAsync(parameters).detach();
+    incppect::getInstance().runAsync(parameters).detach();
 
     int8_t  var_int8  = 1;
     int16_t var_int16 = 2;
@@ -26,14 +28,14 @@ int main(int argc, char ** argv) {
 
     const char * var_str = "hello browser";
 
-    Incppect::getInstance().var("var_int8", [&](auto) { return Incppect::view(var_int8); });
-    Incppect::getInstance().var("var_int16", [&](auto) { return Incppect::view(var_int16); });
-    Incppect::getInstance().var("var_int32", [&](auto) { return Incppect::view(var_int32); });
-    Incppect::getInstance().var("var_int32_arr", [&](auto) { return Incppect::view(var_arr32); });
-    Incppect::getInstance().var("var_int32_arr[%d]", [&](auto idxs) { return Incppect::view(var_arr32[idxs[0]]); });
-    Incppect::getInstance().var("var_float", [&](auto idxs) { return Incppect::view(var_float); });
-    Incppect::getInstance().var("var_double", [&](auto idxs) { return Incppect::view(var_double); });
-    Incppect::getInstance().var("var_str", [&](auto idxs) { return var_str; });
+    incppect::getInstance().var("var_int8", [&](auto) { return incppect::view(var_int8); });
+    incppect::getInstance().var("var_int16", [&](auto) { return incppect::view(var_int16); });
+    incppect::getInstance().var("var_int32", [&](auto) { return incppect::view(var_int32); });
+    incppect::getInstance().var("var_int32_arr", [&](auto) { return incppect::view(var_arr32); });
+    incppect::getInstance().var("var_int32_arr[%d]", [&](auto idxs) { return incppect::view(var_arr32[idxs[0]]); });
+    incppect::getInstance().var("var_float", [&](auto idxs) { return incppect::view(var_float); });
+    incppect::getInstance().var("var_double", [&](auto idxs) { return incppect::view(var_double); });
+    incppect::getInstance().var("var_str", [&](auto idxs) { return var_str; });
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

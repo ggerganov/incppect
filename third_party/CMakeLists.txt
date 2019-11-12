@@ -1,3 +1,5 @@
+find_package(OpenSSL REQUIRED)
+
 if (APPLE)
     add_library(uWS SHARED
         uWebSockets/uSockets/src/context.c
@@ -10,6 +12,7 @@ if (APPLE)
     target_include_directories(uWS PRIVATE
         uWebSockets/uSockets/src
         ${LIBUV_INCLUDE_DIR}
+        ${OPENSSL_INCLUDE_DIR}
         )
 
     target_include_directories(uWS INTERFACE
@@ -22,10 +25,12 @@ if (APPLE)
         )
 
     target_link_libraries(uWS PUBLIC
+        ${OPENSSL_LIBRARIES}
         ${ZLIB_LIBRARIES}
+        ${CMAKE_THREAD_LIBS_INIT}
         )
 
-    target_compile_definitions(uWS PRIVATE LIBUS_NO_SSL=1 LIBUS_USE_LIBUV=1)
+    target_compile_definitions(uWS PRIVATE LIBUS_USE_LIBUV=1)
 elseif (WIN32)
     message(FATAL_ERROR "Windows build not yet supported")
 else ()
@@ -34,11 +39,13 @@ else ()
         uWebSockets/uSockets/src/loop.c
         uWebSockets/uSockets/src/socket.c
         uWebSockets/uSockets/src/ssl.c
-        uWebSockets/uSockets/src/eventing/epoll.c
+        uWebSockets/uSockets/src/eventing/epoll_kqueue.c
+        uWebSockets/uSockets/src/eventing/gcd.c
         )
 
     target_include_directories(uWS PRIVATE
         uWebSockets/uSockets/src
+        ${OPENSSL_INCLUDE_DIR}
         )
 
     target_include_directories(uWS INTERFACE
@@ -46,13 +53,9 @@ else ()
         uWebSockets/src
         )
 
-    target_link_libraries(uWS PRIVATE
-        )
-
     target_link_libraries(uWS PUBLIC
+        ${OPENSSL_LIBRARIES}
         ${ZLIB_LIBRARIES}
         ${CMAKE_THREAD_LIBS_INIT}
         )
-
-    target_compile_definitions(uWS PRIVATE LIBUS_NO_SSL=1)
 endif ()

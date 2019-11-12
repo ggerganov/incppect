@@ -1,6 +1,8 @@
 var incppect = {
     // websocket data
     ws: null,
+
+    // default ws url - change to fit your needs
     ws_uri: 'ws://' + window.location.hostname + ':' + window.location.port + '/incppect',
 
     // vars data

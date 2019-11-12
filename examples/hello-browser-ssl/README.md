@@ -7,4 +7,4 @@ Quick way to generate self-signed certificate is something along the lines of:
 sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem
 ```
 
-<a href="https://i.imgur.com/m3tKqxC.jpg" target="_blank">![hello-browser](https://i.imgur.com/m3tKqxC.jpg)</a>
+<a href="https://i.imgur.com/IB2oJVR.jpg" target="_blank">![hello-browser-ssl](https://i.imgur.com/IB2oJVR.jpg)</a>

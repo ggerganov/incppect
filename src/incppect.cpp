@@ -69,7 +69,10 @@ struct Incppect<SSL>::Impl {
     void run() {
         mainLoop = uWS::Loop::get();
 
-        my_printf("[incppect] running instance. serving HTTP from '%s'\n", parameters.httpRoot.c_str());
+        {
+            const char * kProtocol = SSL ? "HTTPS" : "HTTP";
+            my_printf("[incppect] running instance. serving %s from '%s'\n", kProtocol, parameters.httpRoot.c_str());
+        }
 
         typename uWS::TemplatedApp<SSL>::WebSocketBehavior wsBehaviour;
         wsBehaviour.compression = uWS::SHARED_COMPRESSOR;
@@ -231,6 +234,17 @@ struct Incppect<SSL>::Impl {
             app.reset(new uWS::TemplatedApp<SSL>());
         }
 
+        if (app->constructorFailed()) {
+            my_printf("[incppect] failed to construct uWS server!\n");
+            if (SSL) {
+                my_printf("[incppect] verify that you have valid certificate files:\n");
+                my_printf("[incppect] key  file : '%s'\n", parameters.sslKey.c_str());
+                my_printf("[incppect] cert file : '%s'\n", parameters.sslCert.c_str());
+            }
+
+            return;
+        }
+
         (*app).template ws<PerSocketData>("/incppect", std::move(wsBehaviour)
         ).get("/incppect.js", [](auto *res, auto * /*req*/) {
                 res->end(kIncppect_js);
@@ -271,6 +285,9 @@ struct Incppect<SSL>::Impl {
             this->listenSocket = token;
             if (token) {
                 my_printf("[incppect] listening on port %d\n", parameters.portListen);
+
+                const char * kProtocol = SSL ? "https" : "http";
+                my_printf("[incppect] %s://localhost:%d/\n", kProtocol, parameters.portListen);
             }
         }).run();
     }

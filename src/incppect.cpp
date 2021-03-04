@@ -66,6 +66,13 @@ struct Incppect<SSL>::Impl {
         uWS::WebSocket<SSL, true> * ws = nullptr;
     };
 
+    inline bool hasExt(std::string_view file, std::string_view ext) {
+        if (ext.size() > file.size()) {
+            return false;
+        }
+        return std::equal(ext.rbegin(), ext.rend(), file.rbegin());
+    }
+
     void run() {
         mainLoop = uWS::Loop::get();
 
@@ -278,6 +285,10 @@ struct Incppect<SSL>::Impl {
             if (str.size() == 0) {
                 res->end("Resource not found");
                 return;
+            }
+
+            if (hasExt(req->getUrl(), ".js")) {
+                res->writeHeader("Content-Type", "text/javascript");
             }
 
             res->end(str);

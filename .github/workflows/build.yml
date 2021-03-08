@@ -72,7 +72,7 @@ jobs:
             - name: Dependencies
               run: |
                   brew update
-                  brew install libuv
+                  brew install libuv openssl
 
             - name: Configure
               run: cmake . -DCMAKE_BUILD_TYPE=${{ matrix.build }}

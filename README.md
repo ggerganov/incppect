@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/ggerganov/incppect.svg?branch=master)](https://travis-ci.org/ggerganov/incppect?branch=master)
+[![Actions Status](https://github.com/ggerganov/incppect/workflows/CI/badge.svg)](https://github.com/ggerganov/incppect/actions)
 
 # incppect
 

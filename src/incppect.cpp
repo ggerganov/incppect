@@ -524,7 +524,7 @@ void Incppect<SSL>::stop() {
                     sd.second->mainLoop->defer([sd]() {
                         sd.second->ws->close();
                     });
-		}
+                }
             }
             us_listen_socket_close(0, m_impl->listenSocket);
         });

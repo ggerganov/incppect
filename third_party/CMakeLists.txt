@@ -10,7 +10,7 @@ if (APPLE)
         uWebSockets/uSockets/src/context.c
         uWebSockets/uSockets/src/loop.c
         uWebSockets/uSockets/src/socket.c
-        uWebSockets/uSockets/src/ssl.c
+        uWebSockets/uSockets/src/crypto/openssl.c
         uWebSockets/uSockets/src/eventing/libuv.c
         )
 
@@ -43,7 +43,7 @@ else ()
         uWebSockets/uSockets/src/context.c
         uWebSockets/uSockets/src/loop.c
         uWebSockets/uSockets/src/socket.c
-        uWebSockets/uSockets/src/ssl.c
+        uWebSockets/uSockets/src/crypto/openssl.c
         uWebSockets/uSockets/src/eventing/epoll_kqueue.c
         uWebSockets/uSockets/src/eventing/gcd.c
         )
@@ -67,4 +67,6 @@ endif ()
 
 if (INCPPECT_NO_SSL)
     target_compile_options(uWS PRIVATE -DLIBUS_NO_SSL=1)
+else()
+    target_compile_options(uWS PRIVATE -DLIBUS_USE_OPENSSL=1)
 endif ()

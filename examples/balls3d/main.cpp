@@ -182,6 +182,8 @@ int main(int argc, char ** argv) {
     parameters.portListen = port;
     parameters.maxPayloadLength_bytes = 256*1024;
     parameters.httpRoot = httpRoot + "/balls3d";
+    parameters.resources = { "", "index.html", };
+
     incppect::getInstance().runAsync(parameters).detach();
 
     float checkpoint = 0.0f;

@@ -36,6 +36,7 @@ class Incppect {
             int32_t tIdleTimeout_s = 120;
 
             std::string httpRoot = ".";
+            std::vector<std::string> resources;
 
             std::string sslKey = "key.pem";
             std::string sslCert = "cert.pem";

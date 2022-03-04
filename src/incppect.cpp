@@ -255,44 +255,57 @@ struct Incppect<SSL>::Impl {
         (*app).template ws<PerSocketData>("/incppect", std::move(wsBehaviour)
         ).get("/incppect.js", [](auto *res, auto * /*req*/) {
                 res->end(kIncppect_js);
-        }).get("/*", [this](auto *res, auto *req) {
-            std::string url = std::string(req->getUrl());
+        });
+        for (const auto & resource : parameters.resources) {
+            (*app).get("/" + resource, [this](auto *res, auto *req) {
+                std::string url = std::string(req->getUrl());
+                my_printf("url = '%s'\n", url.c_str());
 
-            if (url.size() == 0) {
-                res->end("Resource not found");
-                return;
-            }
+                if (url.size() == 0) {
+                    res->end("Resource not found");
+                    return;
+                }
 
-            if (url[url.size() - 1] == '/') {
-                url += "index.html";
-            }
+                if (url[url.size() - 1] == '/') {
+                    url += "index.html";
+                }
 
-            if (resources.find(url) != resources.end()) {
-                res->end(resources[url]);
-                return;
-            }
+                if (resources.find(url) != resources.end()) {
+                    res->end(resources[url]);
+                    return;
+                }
 
-            std::ifstream fin(parameters.httpRoot + url);
+                my_printf("resource = '%s'\n", (parameters.httpRoot + url).c_str());
+                std::ifstream fin(parameters.httpRoot + url);
 
-            if (fin.is_open() == false || fin.good() == false) {
-                res->end("Resource not found");
-                return;
-            }
+                if (fin.is_open() == false || fin.good() == false) {
+                    res->end("Resource not found");
+                    return;
+                }
 
-            std::string str((std::istreambuf_iterator<char>(fin)),
-                            std::istreambuf_iterator<char>());
+                const std::string str((std::istreambuf_iterator<char>(fin)),
+                                      std::istreambuf_iterator<char>());
 
-            if (str.size() == 0) {
-                res->end("Resource not found");
-                return;
-            }
+                if (str.size() == 0) {
+                    res->end("Resource not found");
+                    return;
+                }
 
-            if (hasExt(req->getUrl(), ".js")) {
-                res->writeHeader("Content-Type", "text/javascript");
-            }
+                if (hasExt(req->getUrl(), ".js")) {
+                    res->writeHeader("Content-Type", "text/javascript");
+                }
 
-            res->end(str);
-        }).listen(parameters.portListen, [this](auto *token) {
+                res->end(str);
+            });
+        }
+        (*app).get("/*", [this](auto *res, auto *req) {
+            const std::string url = std::string(req->getUrl());
+            my_printf("url = '%s'\n", url.c_str());
+
+            res->end("Resource not found");
+            return;
+        });
+        (*app).listen(parameters.portListen, [this](auto *token) {
             this->listenSocket = token;
             if (token) {
                 my_printf("[incppect] listening on port %d\n", parameters.portListen);

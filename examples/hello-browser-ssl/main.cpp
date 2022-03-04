@@ -18,6 +18,7 @@ int main(int argc, char ** argv) {
     parameters.portListen = port;
     parameters.maxPayloadLength_bytes = 256*1024;
     parameters.httpRoot = httpRoot + "/hello-browser-ssl";
+    parameters.resources = { "", "index.html", };
 
     // make sure you have generated those and they are valid
     parameters.sslKey = "key.pem";

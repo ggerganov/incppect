@@ -17,6 +17,8 @@ int main(int argc, char ** argv) {
     parameters.portListen = port;
     parameters.maxPayloadLength_bytes = 256*1024;
     parameters.httpRoot = httpRoot + "/client-info";
+    parameters.resources = { "", "index.html", "clients.html", };
+
     incppect::getInstance().runAsync(parameters).detach();
 
     int8_t  var_int8  = 1;

@@ -1,0 +1,45 @@
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="incppect.js"></script>
+    </head>
+
+    <body>
+        <h3>Incppect example: send</h3>
+
+        Press the buttons to send data to the C++ program. Check the standard output of the program to see the data.
+
+        <br><br>
+
+        <button onclick="incppect.send('test')">Test</button>
+        <button onclick="incppect.send('проба')">проба</button>
+        <button onclick="incppect.send('先秦兩漢')">先秦兩漢</button>
+
+        <script>
+            function init() {
+                // create output element
+                var output = document.createElement('div');
+                document.body.appendChild( output );
+
+                // define incppect client functions
+                incppect.render = function() {
+                    // nothing to render in this example
+                }
+
+                incppect.onerror = function(evt) {
+                    if (typeof evt === 'object') {
+                        output.innerHTML = 'Error: check console for more information';
+                        console.error(evt);
+                    } else {
+                        output.innerHTML = evt;
+                    }
+                }
+
+                // initialize incppect client
+                incppect.init();
+            }
+
+            init();
+        </script>
+    </body>
+</html>

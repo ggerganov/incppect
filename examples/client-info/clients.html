@@ -38,8 +38,14 @@
                         var ipaddress_bytes = this.get_int32('incppect.ip_address[%d]', i);
                         output.innerHTML += 'client ' + i + ' : ' + int_to_ip(ipaddress_bytes) + '<br>';
                     }
+                    output.innerHTML += '<br>';
+                    output.innerHTML += 'Server stats:<br>';
                     output.innerHTML += 'tx total = ' + (tx_total/1024.0/1024.0).toFixed(4) + ' MB<br>';
                     output.innerHTML += 'rx total = ' + (rx_total/1024.0/1024.0).toFixed(4) + ' MB<br>';
+                    output.innerHTML += '<br>';
+                    output.innerHTML += 'Client stats:<br>';
+                    output.innerHTML += 'tx client = ' + (this.stats.tx_bytes/1024.0/1024.0).toFixed(4) + ' MB / ' + (this.stats.tx_n) + ' msgs<br>';
+                    output.innerHTML += 'rx client = ' + (this.stats.rx_bytes/1024.0/1024.0).toFixed(4) + ' MB / ' + (this.stats.rx_n) + ' msgs<br>';
                 }
 
                 incppect.onerror = function(evt) {

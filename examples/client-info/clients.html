@@ -30,8 +30,8 @@
                 incppect.render = function() {
                     // print incppect client info
                     var nclients = this.get_int32('incppect.nclients');
-                    var tx_total = this.get_int32('incppect.tx_total');
-                    var rx_total = this.get_int32('incppect.rx_total');
+                    var tx_total = this.get_double('incppect.tx_total');
+                    var rx_total = this.get_double('incppect.rx_total');
 
                     output.innerHTML = 'nclients = ' + nclients + '<br>';
                     for (var i = 0; i < nclients; ++i) {
